@@ -1,0 +1,53 @@
+<component name="libraryTable">
+  <library name="Java">
+    <CLASSES>
+      <root url="file://$PROJECT_DIR$/.." />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="file://$PROJECT_DIR$/../AvgUtilBill/src" />
+      <root url="file://$PROJECT_DIR$/../Java2545examples/src" />
+      <root url="file://$PROJECT_DIR$/../Lab 2 Shipping Cost/src" />
+      <root url="file://$PROJECT_DIR$/../Lab 2 Smartphone/src" />
+      <root url="file://$PROJECT_DIR$/../Lab 3 - Go Fish - Version 2/src" />
+      <root url="file://$PROJECT_DIR$/../Lab 3 Advanced Problem 2 - Go Fish/src" />
+      <root url="file://$PROJECT_DIR$/../Lab 3 Problem 2 Agile or Waterfall/src" />
+      <root url="file://$PROJECT_DIR$/../Lab 3 Problem 3 - Repetition/src" />
+      <root url="file://$PROJECT_DIR$/../Lab 3 Problem 4 - arrays and methods/src" />
+      <root url="file://$PROJECT_DIR$/../Lab 4 Advanced Problem 1 - Deck of Cards/src" />
+      <root url="file://$PROJECT_DIR$/../Lab 4 Advanced Problem 1 - Experimental/src" />
+      <root url="file://$PROJECT_DIR$/../Lab 4 Problem 1 - ArrayList/src" />
+      <root url="file://$PROJECT_DIR$/../Lab 4 Problem 3 - ArrayList or LinkedList/src" />
+      <root url="file://$PROJECT_DIR$/../Lab 4 Problem 4 - HashMaps/src" />
+      <root url="file://$PROJECT_DIR$/../Lab 4 Project 2 - Arrays/src" />
+      <root url="file://$PROJECT_DIR$/../Lab 4 WarmUps/src" />
+      <root url="file://$PROJECT_DIR$/../Lab 5 Advanced Problem 1 - Daily Sales Report/src" />
+      <root url="file://$PROJECT_DIR$/../Lab 5 Advanced Problem 2 - File Name with Path/src" />
+      <root url="file://$PROJECT_DIR$/../Lab 5 Advanced Problem 3 - Determine OS for File/src" />
+      <root url="file://$PROJECT_DIR$/../Lab 5 Advanced Problem 4 - System Properties File/src" />
+      <root url="file://$PROJECT_DIR$/../Lab 5 Problem 2 - Recycling/src" />
+      <root url="file://$PROJECT_DIR$/../Lab 5 Problem 3 - Recycling with input file/src" />
+      <root url="file://$PROJECT_DIR$/../Lab 5 Problem 6 - Code Crashes/src" />
+      <root url="file://$PROJECT_DIR$/../Lab 5 Problem 7 - Code Crash Fixed/src" />
+      <root url="file://$PROJECT_DIR$/../Lab 5 Test for Properties/src" />
+      <root url="file://$PROJECT_DIR$/../Lab2 Pyramid/src" />
+      <root url="file://$PROJECT_DIR$/../Lab2 pangram/src" />
+      <root url="file://$PROJECT_DIR$/../Lab_3_MPG/src" />
+      <root url="file://$PROJECT_DIR$/../NumGuess/src" />
+      <root url="file://$PROJECT_DIR$/../Roll2Dice/src" />
+      <root url="file://$PROJECT_DIR$/../credit_card_test/src/main/java" />
+      <root url="file://$PROJECT_DIR$/../credit_card_test/src/test/java" />
+      <root url="file://$PROJECT_DIR$/../dinosaur/src/com.wolfe" />
+      <root url="file://$PROJECT_DIR$/../five/src" />
+      <root url="file://$PROJECT_DIR$/../four/src" />
+      <root url="file://$PROJECT_DIR$/../lab 3 marathon/src" />
+      <root url="file://$PROJECT_DIR$/../meters_to_feet_test/src/main/java" />
+      <root url="file://$PROJECT_DIR$/../meters_to_feet_test/src/test/java" />
+      <root url="file://$PROJECT_DIR$/../myfirsthelloworld/src" />
+      <root url="file://$PROJECT_DIR$/../one/src" />
+      <root url="file://$PROJECT_DIR$/../six/src" />
+      <root url="file://$PROJECT_DIR$/../three/src" />
+      <root url="file://$PROJECT_DIR$/../two/src" />
+    </SOURCES>
+  </library>
+</component>
