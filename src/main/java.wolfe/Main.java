@@ -10,9 +10,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Scanner;
 
 import static java.lang.System.exit;
@@ -55,7 +53,7 @@ public class Main {
         }
 
 
-        exit(0);
+        // exit(0);
 
         String foreignKey = loadPackageTable();
 
@@ -65,71 +63,6 @@ public class Main {
 
 
     } // end main method
-
-    private static void searchForFiles(FileSearch fileSearch) {
-
-
-        //FileSearch fileSearch = new FileSearch();
-
-        //try different directory and filename :)
-        //  fileSearch.searchDirectory(new File("/Users/mkyong/websites"), "post.php");
-        searchDirectory(new File("C:\\Users\\myrlin\\Desktop\\Java\\JavaDocs\\docs\\api\\java"), "package-summary.html", fileSearch);
-        //searchDirectory(new File("C:\\Users\\myrlin\\Desktop\\Java\\JavaDocs\\docs\\api"), "package-summary.html", fileSearch);
-
-        int count = fileSearch.getResult().size();
-        if(count ==0){
-            System.out.println("\nNo result found!");
-        }else{
-            System.out.println("\nFound " + count + " result!\n");
-            for (String matched : fileSearch.getResult()){
-                System.out.println("Found : " + matched);
-            }
-        }
-    }
-
-
-    public static void searchDirectory(File directory, String fileNameToSearch, FileSearch fileSearch) {
-
-       // FileSearch fileSearch = new FileSearch();
-
-        fileSearch.setFileNameToSearch(fileNameToSearch);
-
-        if (directory.isDirectory()) {
-            search(directory, fileSearch);
-        } else {
-            System.out.println(directory.getAbsoluteFile() + " is not a directory!");
-        }
-
-    }
-
-    private static void search(File file, FileSearch fileSearch) {
-
-      //  FileSearch fileSearch = new FileSearch();
-
-        if (file.isDirectory()) {
-            System.out.println("Searching directory ... " + file.getAbsoluteFile());
-
-            //do you have permission to read this directory?
-            if (file.canRead() && file.listFiles() != null) {
-                for (File temp : file.listFiles()) {
-                    if (temp.isDirectory()) {
-                        search(temp, fileSearch);
-                    } else {
-                        if (fileSearch.getFileNameToSearch().equals(temp.getName().toLowerCase())) {
-                            fileSearch.result.add(temp.getAbsoluteFile().toString());
-                        }
-
-                    }
-                }
-
-            } else {
-                System.out.println(file.getAbsoluteFile() + "Permission Denied");
-            }
-        }
-
-    }
-
-
 
 
 
@@ -190,7 +123,7 @@ public class Main {
         Connection connection = DriverManager.getConnection(DB_CONNECTION_URL, USER, PASSWORD);
         Statement statement = connection.createStatement();
 
-        java.sql.PreparedStatement pstmt = connection.prepareStatement("INSERT INTO klass VALUES (?,?,?,?)");
+        java.sql.PreparedStatement pstmt = connection.prepareStatement("INSERT INTO klass VALUES (?,?,?,?,?)");
 
         File input = new File("C:/Users/myrlin/Desktop/Java/JavaDocs/docs/api/java/util/package-summary.html");
         Document doc = Jsoup.parse(input, "UTF-8");
@@ -209,18 +142,20 @@ public class Main {
             String inputDescription = iterator.next().text();
 
             pstmt.setString(1, null);
-            pstmt.setString(2, inputName);
-            pstmt.setString(3, inputDescription);
-            pstmt.setString(4, foreignKey);
+            pstmt.setString(2, "1");
+            pstmt.setString(3, inputName);
+            pstmt.setString(4, inputDescription);
+            pstmt.setString(5, foreignKey);
             pstmt.executeUpdate();
         }
 
         ResultSet rs = statement.executeQuery("SELECT * FROM klass");
         while (rs.next()) {
             System.out.println("ID: " + rs.getString(1));
-            System.out.println("Name: " + rs.getString(2));
-            System.out.println("Description: " + rs.getString(3));
-            System.out.println("Foreign Key: " + rs.getString(4));
+            System.out.println("Type: " + rs.getString(2));
+            System.out.println("Name: " + rs.getString(3));
+            System.out.println("Description: " + rs.getString(4));
+            System.out.println("Foreign Key: " + rs.getString(5));
             System.out.println();
         }
 
@@ -304,6 +239,74 @@ public class Main {
 
 
     }
+
+
+
+
+    private static void searchForFiles(FileSearch fileSearch) {
+
+
+        //FileSearch fileSearch = new FileSearch();
+
+        //try different directory and filename :)
+        //  fileSearch.searchDirectory(new File("/Users/mkyong/websites"), "post.php");
+        searchDirectory(new File("C:\\Users\\myrlin\\Desktop\\Java\\JavaDocs\\docs\\api\\java"), "package-summary.html", fileSearch);
+        //searchDirectory(new File("C:\\Users\\myrlin\\Desktop\\Java\\JavaDocs\\docs\\api"), "package-summary.html", fileSearch);
+
+        int count = fileSearch.getResult().size();
+        if(count ==0){
+            System.out.println("\nNo result found!");
+        }else{
+            System.out.println("\nFound " + count + " result!\n");
+            for (String matched : fileSearch.getResult()){
+                System.out.println("Found : " + matched);
+            }
+        }
+    }
+
+
+    public static void searchDirectory(File directory, String fileNameToSearch, FileSearch fileSearch) {
+
+        // FileSearch fileSearch = new FileSearch();
+
+        fileSearch.setFileNameToSearch(fileNameToSearch);
+
+        if (directory.isDirectory()) {
+            search(directory, fileSearch);
+        } else {
+            System.out.println(directory.getAbsoluteFile() + " is not a directory!");
+        }
+
+    }
+
+    private static void search(File file, FileSearch fileSearch) {
+
+        //  FileSearch fileSearch = new FileSearch();
+
+        if (file.isDirectory()) {
+            System.out.println("Searching directory ... " + file.getAbsoluteFile());
+
+            //do you have permission to read this directory?
+            if (file.canRead() && file.listFiles() != null) {
+                for (File temp : file.listFiles()) {
+                    if (temp.isDirectory()) {
+                        search(temp, fileSearch);
+                    } else {
+                        if (fileSearch.getFileNameToSearch().equals(temp.getName().toLowerCase())) {
+                            fileSearch.result.add(temp.getAbsoluteFile().toString());
+                        }
+
+                    }
+                }
+
+            } else {
+                System.out.println(file.getAbsoluteFile() + "Permission Denied");
+            }
+        }
+
+    }
+
+
 
 
 } // end class main
