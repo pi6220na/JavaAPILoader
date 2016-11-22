@@ -59,11 +59,82 @@ public class Main {
 
         loadKlassTable(foreignKey);
 
+        loadMethodTable();
+
 //        holdStuff();
 
 
     } // end main method
 
+    private static void loadMethodTable() throws Exception {
+
+        Connection connection = DriverManager.getConnection(DB_CONNECTION_URL, USER, PASSWORD);
+        Statement statement = connection.createStatement();
+
+        java.sql.PreparedStatement pstmt = connection.prepareStatement("INSERT INTO method VALUES (?,?,?,?,?,?)");
+
+
+
+        ResultSet rs = statement.executeQuery("SELECT * FROM java_api.klass WHERE name LIKE 'arraylist%'");
+        String foreignKey = null;
+        while (rs.next()) {
+            System.out.println("ID: " + rs.getString(1));
+            foreignKey = rs.getString(1);
+            System.out.println("Type: " + rs.getString(2));
+            System.out.println("Name: " + rs.getString(3));
+            System.out.println("Description: " + rs.getString(4));
+            System.out.println("Foreign Key: " + rs.getString(5));
+            System.out.println();
+        }
+
+
+
+        File input = new File("C:/Users/myrlin/Desktop/Java/JavaDocs/docs/api/java/util/Arraylist.html");
+        Document doc = Jsoup.parse(input, "UTF-8");
+
+
+        Element table = doc.select("table[summary=Method Summary table, listing methods, and an explanation]").first();
+//        Iterator<Element> iterator = table.select("code, div[class=block]").iterator(); //, div[class=block]
+//        Iterator<Element> iterator = table.select("td[class=colFirst], td[class=colLast], div[class=block]").iterator(); //, div[class=block]
+        Iterator<Element> iterator = table.select("td[class=colFirst], td[class=colLast]").iterator(); //, div[class=block]
+        int count = 1;
+        String type = null;
+        String name = null;
+        String trimmed = null;
+        while (iterator.hasNext()) {
+            type = iterator.next().text();
+            name = iterator.next().text();
+            trimmed = name.split("\\)", 2)[0];   // concept from:http://stackoverflow.com/questions/18220022/how-to-trim-a-string-after-a-specific-character-in-java
+            trimmed = trimmed + ")";
+            System.out.println(count + " text : " + type);
+            System.out.println(count + " text : " + trimmed);
+            System.out.println(count + " text : " + name);
+
+            pstmt.setString(1, null);
+            pstmt.setString(2, type);
+            pstmt.setString(3, trimmed);
+            pstmt.setString(4, name);
+            pstmt.setString(5, null);
+            pstmt.setString(6, foreignKey);
+            pstmt.executeUpdate();
+        }
+
+        rs = statement.executeQuery("SELECT * FROM method");
+        while (rs.next()) {
+            System.out.println("ID: " + rs.getString(1));
+            System.out.println("Type: " + rs.getString(2));
+            System.out.println("Name: " + rs.getString(3));
+            System.out.println("Description: " + rs.getString(4));
+            System.out.println("Foreign Key: " + rs.getString(5));
+            System.out.println();
+        }
+
+        rs.close();
+        statement.close();
+        connection.close();
+
+
+    }
 
 
     private static String loadPackageTable() throws Exception {
