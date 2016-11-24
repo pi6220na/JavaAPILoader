@@ -42,12 +42,11 @@ public class Main {
 
         deleteTables();
 
+/*
         File file = new File("C:/Users/myrlin/Desktop/Java/JavaDocs/docs/api/java/util/package-summary.html");
-
         getDirectory(file);
-
         exit(0);
-
+*/
 
         searchForFiles(fileSearch); // copied entirely from:
                                     // https://www.mkyong.com/java/search-directories-recursively-for-file-in-java/
@@ -62,23 +61,37 @@ public class Main {
             items++;
             System.out.println(items + "  processing dir = " + dir);
 
-            String foreignKey = loadPackageTable(dir);
+            String packageFK = loadPackageTable(dir);
 
-            loadKlassTable(foreignKey, dir);
+            ResultSet klasses = loadKlassTable(packageFK, dir);
+
+            while (klasses.next()) {
+                System.out.println("ID: " + klasses.getString(1));
+                System.out.println("Type: " + klasses.getString(2));
+                System.out.println("Name: " + klasses.getString(3));
+                System.out.println("Description: " + klasses.getString(4));
+                System.out.println("Foreign Key: " + klasses.getString(5));
+                System.out.println();
+
+                loadMethodTable(klasses.getString(3), klasses.getString(1));
+
+            }
+
+
 
         }
 
 
         // exit(0);
 
-        // loadMethodTable();
+
 
 //        holdStuff();
 
 
     } // end main method
 
-    private static void loadMethodTable() throws Exception {
+    private static void loadMethodTable(String searchname, String klassFK) throws Exception {
 
         Connection connection = DriverManager.getConnection(DB_CONNECTION_URL, USER, PASSWORD);
         Statement statement = connection.createStatement();
@@ -87,16 +100,17 @@ public class Main {
 
 
 
+        searchname = searchname + "%";
         ResultSet rs = statement.executeQuery("SELECT * FROM java_api.klass WHERE name LIKE 'arraylist%'");
         String foreignKey = null;
         while (rs.next()) {
-            System.out.println("ID: " + rs.getString(1));
+//            System.out.println("ID: " + rs.getString(1));
             foreignKey = rs.getString(1);
-            System.out.println("Type: " + rs.getString(2));
-            System.out.println("Name: " + rs.getString(3));
-            System.out.println("Description: " + rs.getString(4));
-            System.out.println("Foreign Key: " + rs.getString(5));
-            System.out.println();
+//            System.out.println("Type: " + rs.getString(2));
+//            System.out.println("Name: " + rs.getString(3));
+//            System.out.println("Description: " + rs.getString(4));
+//            System.out.println("Foreign Key: " + rs.getString(5));
+//            System.out.println();
         }
 
 
@@ -118,9 +132,9 @@ public class Main {
             name = iterator.next().text();
             trimmed = name.split("\\)", 2)[0];   // concept from:http://stackoverflow.com/questions/18220022/how-to-trim-a-string-after-a-specific-character-in-java
             trimmed = trimmed + ")";
-            System.out.println(count + " text : " + type);
-            System.out.println(count + " text : " + trimmed);
-            System.out.println(count + " text : " + name);
+//            System.out.println(count + " text : " + type);
+//            System.out.println(count + " text : " + trimmed);
+//            System.out.println(count + " text : " + name);
 
             pstmt.setString(1, null);
             pstmt.setString(2, type);
@@ -131,6 +145,7 @@ public class Main {
             pstmt.executeUpdate();
         }
 
+/*
         rs = statement.executeQuery("SELECT * FROM method");
         while (rs.next()) {
             System.out.println("ID: " + rs.getString(1));
@@ -140,6 +155,7 @@ public class Main {
             System.out.println("Foreign Key: " + rs.getString(5));
             System.out.println();
         }
+*/
 
         rs.close();
         statement.close();
@@ -184,7 +200,7 @@ public class Main {
             pstmt.setString(3, description);
             pstmt.executeUpdate();
 
-
+/*
             ResultSet rs = statement.executeQuery("SELECT * FROM package");
             while (rs.next()) {
                 System.out.println("ID: " + rs.getString(1));
@@ -195,9 +211,11 @@ public class Main {
             }
 
             rs.close();
-
+*/
         } catch (Exception e) {
+            System.out.println();
             e.printStackTrace();
+            System.out.println();
         }
 
 
@@ -211,7 +229,7 @@ public class Main {
 
 
 
-    private static void loadKlassTable(String foreignKey, String dir) throws Exception {
+    private static ResultSet loadKlassTable(String packageFK, String dir) throws Exception {
 
         Connection connection = DriverManager.getConnection(DB_CONNECTION_URL, USER, PASSWORD);
         Statement statement = connection.createStatement();
@@ -221,6 +239,9 @@ public class Main {
         //File input = new File("C:/Users/myrlin/Desktop/Java/JavaDocs/docs/api/java/util/package-summary.html");
         File input = new File(dir);
         Document doc = Jsoup.parse(input, "UTF-8");
+
+
+        ResultSet rs = statement.executeQuery("SELECT * FROM klass");
 
 
         // Element table = doc.select("table[summary=Interface Summary table, listing interfaces, and an explanation]").first();
@@ -246,11 +267,12 @@ public class Main {
                     pstmt.setString(2, "1");
                     pstmt.setString(3, inputName);
                     pstmt.setString(4, inputDescription);
-                    pstmt.setString(5, foreignKey);
+                    pstmt.setString(5, packageFK);
                     pstmt.executeUpdate();
                 }
 
-                ResultSet rs = statement.executeQuery("SELECT * FROM klass");
+
+/*
                 while (rs.next()) {
                     System.out.println("ID: " + rs.getString(1));
                     System.out.println("Type: " + rs.getString(2));
@@ -259,19 +281,23 @@ public class Main {
                     System.out.println("Foreign Key: " + rs.getString(5));
                     System.out.println();
                 }
-
-                rs.close();
+*/
 
             }
 
 
         }
         catch (Exception e) {
+            System.out.println();
             e.printStackTrace();
+            System.out.println();
         }
 
+        rs.close();
         statement.close();
         connection.close();
+
+        return rs;
 
     } // end loadKlassTable
 
