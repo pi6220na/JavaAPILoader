@@ -11,7 +11,6 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.Scanner;
 
 import static java.lang.System.exit;
@@ -52,10 +51,6 @@ public class Main {
             loadKlassTable(packageFK, dir);
 
             }
-
-        //rs.close();
-        //statement.close();
-        //connection.close();
 
     }
 
@@ -100,14 +95,14 @@ public class Main {
 
             ResultSet rs = statement.executeQuery("SELECT * FROM package");
             while (rs.next()) {
-                System.out.println("ID: " + rs.getString(1));
+    //            System.out.println("ID: " + rs.getString(1));
                 foreignKey = rs.getString(1);
-                System.out.println("Name: " + rs.getString(2));
-                System.out.println("Description: " + rs.getString(3));
-                System.out.println();
+    //            System.out.println("Name: " + rs.getString(2));
+    //            System.out.println("Description: " + rs.getString(3));
+    //            System.out.println();
             }
-
             rs.close();
+
 
         } catch (Exception e) {
             System.out.println();
@@ -122,7 +117,6 @@ public class Main {
         return foreignKey;
 
     } // end loadPackageTable
-
 
 
 
@@ -172,12 +166,12 @@ public class Main {
                 File currentDir = new File(dir);
 
                 while (rs.next()) {
-                    System.out.println("ID: " + rs.getString(1));
-                    System.out.println("Type: " + rs.getString(2));
-                    System.out.println("Name: " + rs.getString(3));
-                    System.out.println("Description: " + rs.getString(4));
-                    System.out.println("Foreign Key: " + rs.getString(5));
-                    System.out.println();
+//                    System.out.println("ID: " + rs.getString(1));
+//                    System.out.println("Type: " + rs.getString(2));
+//                    System.out.println("Name: " + rs.getString(3));
+//                    System.out.println("Description: " + rs.getString(4));
+//                    System.out.println("Foreign Key: " + rs.getString(5));
+//                    System.out.println();
 
                     loadMethodTable(rs.getString(3), rs.getString(1), currentDir);
                 }
@@ -208,19 +202,6 @@ public class Main {
 
         java.sql.PreparedStatement pstmt = connection.prepareStatement("INSERT INTO method VALUES (?,?,?,?,?,?)");
 
-//        ResultSet rs = statement.executeQuery("SELECT * FROM java_api.klass WHERE name LIKE 'arraylist%'");
-//        String foreignKey = null;
-//        while (rs.next()) {
-//            System.out.println("ID: " + rs.getString(1));
-//            foreignKey = rs.getString(1);
-//            System.out.println("Type: " + rs.getString(2));
-//            System.out.println("Name: " + rs.getString(3));
-//            System.out.println("Description: " + rs.getString(4));
-//            System.out.println("Foreign Key: " + rs.getString(5));
-//            System.out.println();
-//        }
-
-
         File newDir = directory.getParentFile();
         System.out.println("in loadMethodTable: parent directory = " + newDir);
         String methodFile = newDir + "\\" + searchname + ".html";
@@ -236,50 +217,33 @@ public class Main {
 
 
             Element table = doc.select("table[summary=Method Summary table, listing methods, and an explanation]").first();
-//        Iterator<Element> iterator = table.select("code, div[class=block]").iterator(); //, div[class=block]
-//        Iterator<Element> iterator = table.select("td[class=colFirst], td[class=colLast], div[class=block]").iterator(); //, div[class=block]
             Iterator<Element> iterator = table.select("td[class=colFirst], td[class=colLast]").iterator(); //, div[class=block]
-            int count = 1;
+
             String type = null;                       // type should be called modifier
             String name = null;
             String trimmed = null;
+
             while (iterator.hasNext()) {
                 type = iterator.next().text();
                 name = iterator.next().text();
+
                 trimmed = name.split("\\)", 2)[0];   // concept from:http://stackoverflow.com/questions/18220022/how-to-trim-a-string-after-a-specific-character-in-java
                 trimmed = trimmed + ")";
-                //            System.out.println(count + " text : " + type);
-                //            System.out.println(count + " text : " + trimmed);
-                //            System.out.println(count + " text : " + name);
 
-                pstmt.setString(1, null);
+                pstmt.setString(1, null);                 // ID
                 pstmt.setString(2, type);                 // type should be called modifier
-                pstmt.setString(3, trimmed);
-                pstmt.setString(4, name);
-                pstmt.setString(5, null);
-                pstmt.setString(6, klassFK);
+                pstmt.setString(3, trimmed);              // name
+                pstmt.setString(4, name);                 // summary
+                pstmt.setString(5, null);                 // detail
+                pstmt.setString(6, klassFK);              // klass FK
                 pstmt.executeUpdate();
             }
 
-/*
-        rs = statement.executeQuery("SELECT * FROM method");
-        while (rs.next()) {
-            System.out.println("ID: " + rs.getString(1));
-            System.out.println("Type: " + rs.getString(2));
-            System.out.println("Name: " + rs.getString(3));
-            System.out.println("Description: " + rs.getString(4));
-            System.out.println("Foreign Key: " + rs.getString(5));
-            System.out.println();
-        }
-        rs.close();
-*/
             statement.close();
             connection.close();
         }
 
     }
-
-
 
 
 
@@ -304,8 +268,8 @@ public class Main {
 
         statement.execute("DELETE FROM package");
 
- //       statement.close();
- //       connection.close();
+        statement.close();
+        connection.close();
 
     }
 
@@ -392,7 +356,7 @@ public class Main {
 
         //try different directory and filename :)
         //  fileSearch.searchDirectory(new File("/Users/mkyong/websites"), "post.php");
-        searchDirectory(new File("C:\\Users\\myrlin\\Desktop\\Java\\JavaDocs\\docs\\api\\javax"), "package-summary.html", fileSearch);
+        searchDirectory(new File("C:\\Users\\myrlin\\Desktop\\Java\\JavaDocs\\docs\\api\\java"), "package-summary.html", fileSearch);
         //searchDirectory(new File("C:\\Users\\myrlin\\Desktop\\Java\\JavaDocs\\docs\\api"), "package-summary.html", fileSearch);
 
         int count = fileSearch.getResult().size();
