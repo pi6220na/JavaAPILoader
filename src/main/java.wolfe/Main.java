@@ -27,7 +27,8 @@ public class Main {
 
     // setup the database driver
     static final String JDBC_DRIVER = "com.mysql.cj.jdbc.Driver";
-    static final String DB_CONNECTION_URL = "jdbc:mysql://localhost:3306/java_api";
+    //http://stackoverflow.com/questions/34189756/warning-about-ssl-connection-when-connecting-to-mysql-database
+    static final String DB_CONNECTION_URL = "jdbc:mysql://localhost:3306/java_api?autoReconnect=true&useSSL=false";
     static final String USER = "myrlin";
     static final String PASSWORD = "password";
 
@@ -40,6 +41,12 @@ public class Main {
 
 
         deleteTables();
+
+        File file = new File("C:/Users/myrlin/Desktop/Java/JavaDocs/docs/api/java/util/package-summary.html");
+
+        getDirectory(file);
+
+        exit(0);
 
 
         searchForFiles(fileSearch); // copied entirely from:
@@ -370,10 +377,9 @@ public class Main {
     }
 
 
-
-
+    // copied entirely from:
+    // https://www.mkyong.com/java/search-directories-recursively-for-file-in-java/
     private static void searchForFiles(FileSearch fileSearch) {
-
 
         //FileSearch fileSearch = new FileSearch();
 
@@ -393,7 +399,8 @@ public class Main {
         }
     }
 
-
+    // copied entirely from:
+    // https://www.mkyong.com/java/search-directories-recursively-for-file-in-java/
     public static void searchDirectory(File directory, String fileNameToSearch, FileSearch fileSearch) {
 
         // FileSearch fileSearch = new FileSearch();
@@ -408,6 +415,8 @@ public class Main {
 
     }
 
+    // copied entirely from:
+    // https://www.mkyong.com/java/search-directories-recursively-for-file-in-java/
     private static void search(File file, FileSearch fileSearch) {
 
         //  FileSearch fileSearch = new FileSearch();
@@ -436,7 +445,16 @@ public class Main {
     }
 
 
+    private static File getDirectory(File file) {
 
+        File newDir = file.getParentFile();
+        String newFileName = file.getName();
+
+        System.out.println("directory = " + newDir.toString());
+        System.out.println("file name = " + newFileName);
+
+        return newDir;
+    }
 
 } // end class main
 
