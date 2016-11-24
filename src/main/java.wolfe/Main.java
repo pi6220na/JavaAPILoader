@@ -35,27 +35,12 @@ public class Main {
 
     public static void main(String[] args) throws Exception { //TODO handle exceptions properly
 
-//        Class.forName(JDBC_DRIVER);
-//        Connection connection = DriverManager.getConnection(DB_CONNECTION_URL, USER, PASSWORD);
-
         FileSearch fileSearch = new FileSearch();
-
 
         deleteTables();
 
-/*
-        File file = new File("C:/Users/myrlin/Desktop/Java/JavaDocs/docs/api/java/util/package-summary.html");
-        getDirectory(file);
-        exit(0);
-*/
-
         searchForFiles(fileSearch); // copied entirely from:
                                     // https://www.mkyong.com/java/search-directories-recursively-for-file-in-java/
-
-
-        System.out.println();
-        System.out.println("Testing the arraylist...");
-        System.out.println();
 
         int items = 0;
         for (String dir : fileSearch.getResult()){
@@ -64,29 +49,157 @@ public class Main {
 
             String packageFK = loadPackageTable(dir);
 
-            ResultSet klasses = loadKlassTable(packageFK, dir);
-
-            while (klasses.next()) {
-                System.out.println("Klass ID: " + klasses.getString(1));
-                System.out.println("Klass Type: " + klasses.getString(2));
-                System.out.println("Klass Name: " + klasses.getString(3));
-                System.out.println("Klass Description: " + klasses.getString(4));
-                System.out.println("Klass Foreign Key: " + klasses.getString(5));
-                System.out.println();
-
-
-                loadMethodTable(klasses.getString(3), klasses.getString(1), new File(dir));
+            loadKlassTable(packageFK, dir);
 
             }
-
-        }
-
 
         //rs.close();
         //statement.close();
         //connection.close();
 
-    } // end main method
+    }
+
+
+
+
+    private static String loadPackageTable(String dir) throws Exception {
+
+        Class.forName(JDBC_DRIVER);
+
+        Connection connection = DriverManager.getConnection(DB_CONNECTION_URL, USER, PASSWORD);
+        Statement statement = connection.createStatement();
+
+        java.sql.PreparedStatement pstmt = connection.prepareStatement("INSERT INTO package VALUES (?,?,?)");
+
+        //File input = new File("C:/Users/myrlin/Desktop/Java/JavaDocs/docs/api/java/util/package-summary.html");
+        File input = new File(dir);
+        Document doc = Jsoup.parse(input, "UTF-8");
+
+
+        String foreignKey = null;
+
+        try {
+            Elements items = doc.select("div[class=header]");
+            Iterator<Element> iterator = items.select("h1").iterator();
+            String name = null;
+            name = iterator.next().text();
+            name = name.replace("Package", "");
+            System.out.println("name = " + name);
+
+            items = doc.select("div[class=docSummary]");
+            String description = null;
+            iterator = items.select("div[class=block]").iterator();
+            description = iterator.next().text();
+            System.out.println("description = " + description);
+
+            pstmt.setString(1, null);
+            pstmt.setString(2, name);
+            pstmt.setString(3, description);
+            pstmt.executeUpdate();
+
+
+            ResultSet rs = statement.executeQuery("SELECT * FROM package");
+            while (rs.next()) {
+                System.out.println("ID: " + rs.getString(1));
+                foreignKey = rs.getString(1);
+                System.out.println("Name: " + rs.getString(2));
+                System.out.println("Description: " + rs.getString(3));
+                System.out.println();
+            }
+
+            rs.close();
+
+        } catch (Exception e) {
+            System.out.println();
+            e.printStackTrace();
+            System.out.println();
+        }
+
+
+        statement.close();
+        connection.close();
+
+        return foreignKey;
+
+    } // end loadPackageTable
+
+
+
+
+    private static void loadKlassTable(String packageFK, String dir) throws Exception {
+
+        Connection connection = DriverManager.getConnection(DB_CONNECTION_URL, USER, PASSWORD);
+        Statement statement = connection.createStatement();
+
+        java.sql.PreparedStatement pstmt = connection.prepareStatement("INSERT INTO klass VALUES (?,?,?,?,?)");
+
+        //File input = new File("C:/Users/myrlin/Desktop/Java/JavaDocs/docs/api/java/util/package-summary.html");
+        File input = new File(dir);
+        Document doc = Jsoup.parse(input, "UTF-8");
+
+
+
+        // Element table = doc.select("table[summary=Interface Summary table, listing interfaces, and an explanation]").first();
+        Element table = doc.select("table[summary=Class Summary table, listing classes, and an explanation]").first();
+
+        try {
+            if (table.hasText()) {
+
+                Iterator<Element> iterator = table.select("td").iterator();
+                int count = 1;
+                while(iterator.hasNext()) {
+
+                    String inputName = iterator.next().text();
+                    if (inputName.length() > 50) {
+                        inputName = inputName.substring(0, 49);
+                    }
+                    String inputDescription = iterator.next().text();
+                    if (inputDescription.length() > 400) {
+                        inputDescription = inputDescription.substring(0, 399);
+                    }
+
+                    pstmt.setString(1, null);
+                    pstmt.setString(2, "1");
+                    pstmt.setString(3, inputName);
+                    pstmt.setString(4, inputDescription);
+                    pstmt.setString(5, packageFK);
+                    pstmt.executeUpdate();
+                }
+
+
+                ResultSet rs = statement.executeQuery("SELECT * FROM klass");
+
+                File currentDir = new File(dir);
+
+                while (rs.next()) {
+                    System.out.println("ID: " + rs.getString(1));
+                    System.out.println("Type: " + rs.getString(2));
+                    System.out.println("Name: " + rs.getString(3));
+                    System.out.println("Description: " + rs.getString(4));
+                    System.out.println("Foreign Key: " + rs.getString(5));
+                    System.out.println();
+
+                    loadMethodTable(rs.getString(3), rs.getString(1), currentDir);
+                }
+
+            }
+
+
+        }
+        catch (Exception e) {
+            System.out.println();
+            e.printStackTrace();
+            System.out.println();
+        }
+
+//        rs.close();
+//        statement.close();
+        connection.close();
+
+    } // end loadKlassTable
+
+
+
 
     private static void loadMethodTable(String searchname, String klassFK, File directory) throws Exception {
 
@@ -135,9 +248,9 @@ public class Main {
                 name = iterator.next().text();
                 trimmed = name.split("\\)", 2)[0];   // concept from:http://stackoverflow.com/questions/18220022/how-to-trim-a-string-after-a-specific-character-in-java
                 trimmed = trimmed + ")";
-    //            System.out.println(count + " text : " + type);
-    //            System.out.println(count + " text : " + trimmed);
-    //            System.out.println(count + " text : " + name);
+                //            System.out.println(count + " text : " + type);
+                //            System.out.println(count + " text : " + trimmed);
+                //            System.out.println(count + " text : " + name);
 
                 pstmt.setString(1, null);
                 pstmt.setString(2, type);                 // type should be called modifier
@@ -160,150 +273,14 @@ public class Main {
         }
         rs.close();
 */
-
-
-        statement.close();
-        connection.close();
+            statement.close();
+            connection.close();
         }
 
     }
 
 
-    private static String loadPackageTable(String dir) throws Exception {
 
-        Class.forName(JDBC_DRIVER);
-
-        Connection connection = DriverManager.getConnection(DB_CONNECTION_URL, USER, PASSWORD);
-        Statement statement = connection.createStatement();
-
-        java.sql.PreparedStatement pstmt = connection.prepareStatement("INSERT INTO package VALUES (?,?,?)");
-
-        //File input = new File("C:/Users/myrlin/Desktop/Java/JavaDocs/docs/api/java/util/package-summary.html");
-        File input = new File(dir);
-        Document doc = Jsoup.parse(input, "UTF-8");
-
-
-        String foreignKey = null;
-
-        try {
-            Elements items = doc.select("div[class=header]");
-            Iterator<Element> iterator = items.select("h1").iterator();
-            String name = null;
-            name = iterator.next().text();
-            name = name.replace("Package", "");
-            System.out.println("name = " + name);
-
-            items = doc.select("div[class=docSummary]");
-            String description = null;
-            iterator = items.select("div[class=block]").iterator();
-            description = iterator.next().text();
-            System.out.println("description = " + description);
-
-            pstmt.setString(1, null);
-            pstmt.setString(2, name);
-            pstmt.setString(3, description);
-            pstmt.executeUpdate();
-
-
-            ResultSet rs = statement.executeQuery("SELECT * FROM package");
-            while (rs.next()) {
-                System.out.println("ID: " + rs.getString(1));
-                foreignKey = rs.getString(1);
-                System.out.println("Name: " + rs.getString(2));
-                System.out.println("Description: " + rs.getString(3));
-                System.out.println();
-            }
-
-//            rs.close();
-
-        } catch (Exception e) {
-            System.out.println();
-            e.printStackTrace();
-            System.out.println();
-        }
-
-
-        statement.close();
-        connection.close();
-
-        return foreignKey;
-
-    } // end loadPackageTable
-
-
-
-
-    private static ResultSet loadKlassTable(String packageFK, String dir) throws Exception {
-
-        Connection connection = DriverManager.getConnection(DB_CONNECTION_URL, USER, PASSWORD);
-        Statement statement = connection.createStatement();
-
-        java.sql.PreparedStatement pstmt = connection.prepareStatement("INSERT INTO klass VALUES (?,?,?,?,?)");
-
-        //File input = new File("C:/Users/myrlin/Desktop/Java/JavaDocs/docs/api/java/util/package-summary.html");
-        File input = new File(dir);
-        Document doc = Jsoup.parse(input, "UTF-8");
-
-
-        ResultSet rs = statement.executeQuery("SELECT * FROM klass");
-
-
-        // Element table = doc.select("table[summary=Interface Summary table, listing interfaces, and an explanation]").first();
-        Element table = doc.select("table[summary=Class Summary table, listing classes, and an explanation]").first();
-
-        try {
-            if (table.hasText()) {
-
-                Iterator<Element> iterator = table.select("td").iterator();
-                int count = 1;
-                while(iterator.hasNext()) {
-
-                    String inputName = iterator.next().text();
-                    if (inputName.length() > 50) {
-                        inputName = inputName.substring(0, 49);
-                    }
-                    String inputDescription = iterator.next().text();
-                    if (inputDescription.length() > 400) {
-                        inputDescription = inputDescription.substring(0, 399);
-                    }
-
-                    pstmt.setString(1, null);
-                    pstmt.setString(2, "1");
-                    pstmt.setString(3, inputName);
-                    pstmt.setString(4, inputDescription);
-                    pstmt.setString(5, packageFK);
-                    pstmt.executeUpdate();
-                }
-
-
-/*
-                while (rs.next()) {
-                    System.out.println("ID: " + rs.getString(1));
-                    System.out.println("Type: " + rs.getString(2));
-                    System.out.println("Name: " + rs.getString(3));
-                    System.out.println("Description: " + rs.getString(4));
-                    System.out.println("Foreign Key: " + rs.getString(5));
-                    System.out.println();
-                }
-*/
-
-            }
-
-
-        }
-        catch (Exception e) {
-            System.out.println();
-            e.printStackTrace();
-            System.out.println();
-        }
-
-//        rs.close();
-        statement.close();
-        connection.close();
-
-        return rs;
-
-    } // end loadKlassTable
 
 
     private static void deleteTables() throws Exception {
