@@ -65,6 +65,7 @@ public class Main {
         Statement statement = connection.createStatement();
 
         java.sql.PreparedStatement pstmt = connection.prepareStatement("INSERT INTO package VALUES (?,?,?)");
+        java.sql.PreparedStatement sstmt = connection.prepareStatement("SELECT * FROM package WHERE name = ?");
 
         //File input = new File("C:/Users/myrlin/Desktop/Java/JavaDocs/docs/api/java/util/package-summary.html");
         File input = new File(dir);
@@ -76,10 +77,10 @@ public class Main {
         try {
             Elements items = doc.select("div[class=header]");
             Iterator<Element> iterator = items.select("h1").iterator();
-            String name = null;
-            name = iterator.next().text();
-            name = name.replace("Package", "");
-            System.out.println("name = " + name);
+            String nameField = null;
+            nameField = iterator.next().text();
+            nameField = nameField.replace("Package", "");
+            System.out.println("name = " + nameField);
 
             items = doc.select("div[class=docSummary]");
             String description = null;
@@ -88,24 +89,34 @@ public class Main {
             System.out.println("description = " + description);
 
             pstmt.setString(1, null);
-            pstmt.setString(2, name);
+            pstmt.setString(2, nameField);
             pstmt.setString(3, description);
             pstmt.executeUpdate();
 
 
-            ResultSet rs = statement.executeQuery("SELECT * FROM package");
-            while (rs.next()) {
-    //            System.out.println("ID: " + rs.getString(1));
-                foreignKey = rs.getString(1);
+            //ResultSet rs = statement.executeQuery("SELECT * FROM package");
+            sstmt.setString(1, nameField);
+            ResultSet selectRS = sstmt.executeQuery();
+
+            int i = 0;
+            while (selectRS.next()) {
+                i++;
+            }
+
+            System.out.println("package row count off select statement = " + i);
+
+            selectRS.first();
+                System.out.println("ID: " + selectRS.getString(1));
+                foreignKey = selectRS.getString(1);
     //            System.out.println("Name: " + rs.getString(2));
     //            System.out.println("Description: " + rs.getString(3));
     //            System.out.println();
-            }
-            rs.close();
+
+            selectRS.close();
 
 
         } catch (Exception e) {
-            System.out.println();
+            System.out.println("in loadPackage method");
             e.printStackTrace();
             System.out.println();
         }
@@ -126,6 +137,8 @@ public class Main {
         Statement statement = connection.createStatement();
 
         java.sql.PreparedStatement pstmt = connection.prepareStatement("INSERT INTO klass VALUES (?,?,?,?,?)");
+        java.sql.PreparedStatement sstmt = connection.prepareStatement("SELECT * FROM klass WHERE name = ?");
+
 
         //File input = new File("C:/Users/myrlin/Desktop/Java/JavaDocs/docs/api/java/util/package-summary.html");
         File input = new File(dir);
@@ -136,6 +149,8 @@ public class Main {
         // Element table = doc.select("table[summary=Interface Summary table, listing interfaces, and an explanation]").first();
         Element table = doc.select("table[summary=Class Summary table, listing classes, and an explanation]").first();
 
+
+        String inputName = null;
         try {
             if (table.hasText()) {
 
@@ -143,9 +158,9 @@ public class Main {
                 int count = 1;
                 while(iterator.hasNext()) {
 
-                    String inputName = iterator.next().text();
-                    if (inputName.length() > 50) {
-                        inputName = inputName.substring(0, 49);
+                    inputName = iterator.next().text();
+                    if (inputName.length() > 200) {
+                        inputName = inputName.substring(0, 199);
                     }
                     String inputDescription = iterator.next().text();
                     if (inputDescription.length() > 400) {
@@ -161,33 +176,32 @@ public class Main {
                 }
 
 
-                ResultSet rs = statement.executeQuery("SELECT * FROM klass");
+                // ResultSet rs = statement.executeQuery("SELECT * FROM klass");
+                sstmt.setString(1, inputName);
+                ResultSet selectRS = sstmt.executeQuery();
 
                 File currentDir = new File(dir);
 
-                while (rs.next()) {
-//                    System.out.println("ID: " + rs.getString(1));
+                while (selectRS.next()) {
+                    System.out.println("Klass ID: " + selectRS.getString(1));
 //                    System.out.println("Type: " + rs.getString(2));
-//                    System.out.println("Name: " + rs.getString(3));
+                    System.out.println("Klass Name: " + selectRS.getString(3));
 //                    System.out.println("Description: " + rs.getString(4));
 //                    System.out.println("Foreign Key: " + rs.getString(5));
 //                    System.out.println();
 
-                    loadMethodTable(rs.getString(3), rs.getString(1), currentDir);
+                    loadMethodTable(selectRS.getString(3), selectRS.getString(1), currentDir);
                 }
-
             }
-
-
         }
         catch (Exception e) {
-            System.out.println();
+            System.out.println("in loadKlass method");
             e.printStackTrace();
             System.out.println();
         }
 
 //        rs.close();
-//        statement.close();
+        statement.close();
         connection.close();
 
     } // end loadKlassTable
@@ -210,37 +224,47 @@ public class Main {
         System.out.println("in loadMethodTable: filepath = " + methodFile);
 
 
-        if (testFile.isFile()) {
-            File input = new File(methodFile);
-            //File input = new File("C:/Users/myrlin/Desktop/Java/JavaDocs/docs/api/java/util/Arraylist.html");
-            Document doc = Jsoup.parse(input, "UTF-8");
+        try {
+            if (testFile.isFile()) {
+                File input = new File(methodFile);
+                //File input = new File("C:/Users/myrlin/Desktop/Java/JavaDocs/docs/api/java/util/Arraylist.html");
+                Document doc = Jsoup.parse(input, "UTF-8");
 
 
-            Element table = doc.select("table[summary=Method Summary table, listing methods, and an explanation]").first();
-            Iterator<Element> iterator = table.select("td[class=colFirst], td[class=colLast]").iterator(); //, div[class=block]
+                Element table = doc.select("table[summary=Method Summary table, listing methods, and an explanation]").first();
+                Iterator<Element> iterator = table.select("td[class=colFirst], td[class=colLast]").iterator(); //, div[class=block]
 
-            String type = null;                       // type should be called modifier
-            String name = null;
-            String trimmed = null;
+                String type = null;                       // type should be called modifier
+                String name = null;
+                String trimmed = null;
 
-            while (iterator.hasNext()) {
-                type = iterator.next().text();
-                name = iterator.next().text();
+                while (iterator.hasNext()) {
+                    type = iterator.next().text();
+                    name = iterator.next().text();
 
-                trimmed = name.split("\\)", 2)[0];   // concept from:http://stackoverflow.com/questions/18220022/how-to-trim-a-string-after-a-specific-character-in-java
-                trimmed = trimmed + ")";
+                    trimmed = name.split("\\)", 2)[0];   // concept from:http://stackoverflow.com/questions/18220022/how-to-trim-a-string-after-a-specific-character-in-java
+                    trimmed = trimmed + ")";
 
-                pstmt.setString(1, null);                 // ID
-                pstmt.setString(2, type);                 // type should be called modifier
-                pstmt.setString(3, trimmed);              // name
-                pstmt.setString(4, name);                 // summary
-                pstmt.setString(5, null);                 // detail
-                pstmt.setString(6, klassFK);              // klass FK
-                pstmt.executeUpdate();
+                    pstmt.setString(1, null);                 // ID
+                    pstmt.setString(2, type);                 // type should be called modifier
+                    pstmt.setString(3, trimmed);              // name
+                    pstmt.setString(4, name);                 // summary
+                    pstmt.setString(5, null);                 // detail
+                    pstmt.setString(6, klassFK);              // klass FK
+                    pstmt.executeUpdate();
+                }
+
+                statement.close();
+                connection.close();
+            } else {
+                System.out.println("no matching method html file found");
             }
 
-            statement.close();
-            connection.close();
+
+        } catch (Exception e) {
+            System.out.println("in loadMethod");
+            e.printStackTrace();
+            System.out.println();
         }
 
     }
