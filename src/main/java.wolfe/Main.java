@@ -34,6 +34,10 @@ public class Main {
 
     public static void main(String[] args) throws Exception { //TODO handle exceptions properly
 
+
+        String classSummarySearch = "table[summary=Class Summary table, listing classes, and an explanation]";
+        String interfaceSummarySearch = "table[summary=Interface Summary table, listing interfaces, and an explanation]";
+
         Class.forName(JDBC_DRIVER);
         Connection connection = DriverManager.getConnection(DB_CONNECTION_URL, USER, PASSWORD);
 
@@ -51,7 +55,8 @@ public class Main {
 
             String packageFK = loadPackageTable(dir, connection);
 
-            loadKlassTable(packageFK, dir, connection);
+            loadKlassTable(packageFK, dir, connection, classSummarySearch, "1");
+            loadKlassTable(packageFK, dir, connection, interfaceSummarySearch, "2");
 
             System.out.println();
             System.out.println("******* end of package ********");
@@ -166,7 +171,11 @@ public class Main {
 
 
 
-    private static void loadKlassTable(String packageFK, String dir, Connection connection) throws Exception {
+    private static void loadKlassTable(String packageFK,
+                                       String dir,
+                                       Connection connection,
+                                       String searchOn,
+                                       String classType) throws Exception {
 
         int klassRows = 0;
 
@@ -184,7 +193,8 @@ public class Main {
 
 
         // Element table = doc.select("table[summary=Interface Summary table, listing interfaces, and an explanation]").first();
-        Element table = doc.select("table[summary=Class Summary table, listing classes, and an explanation]").first();
+        // Element table = doc.select("table[summary=Class Summary table, listing classes, and an explanation]").first();
+        Element table = doc.select(searchOn).first();
 
 
         String inputName = null;
@@ -205,7 +215,7 @@ public class Main {
                     }
 
                     pstmt.setString(1, null);
-                    pstmt.setString(2, "1");
+                    pstmt.setString(2, classType);
                     pstmt.setString(3, inputName);
                     pstmt.setString(4, inputSummary);
                     pstmt.setString(5, packageFK);
