@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS `java_api`.`klass` (
   `klass_ID` VARCHAR(36) NOT NULL,
   `type_flag` TINYINT(1) NULL COMMENT 'type_flag: 1=class, 2=interface, 3=nested class, 4=nested interface',
   `name` VARCHAR(200) NULL,
-  `description` VARCHAR(400) NULL,
+  `summary` VARCHAR(400) NULL,
   `k_package_ID_fk` VARCHAR(36) NULL,
   PRIMARY KEY (`klass_ID`),
   UNIQUE INDEX `klass_ID_UNIQUE` (`klass_ID` ASC),
@@ -58,7 +58,8 @@ DROP TABLE IF EXISTS `java_api`.`enums` ;
 CREATE TABLE IF NOT EXISTS `java_api`.`enums` (
   `enums_ID` VARCHAR(36) NOT NULL,
   `name` VARCHAR(200) NULL,
-  `description` VARCHAR(400) NULL,
+  `summary` VARCHAR(400) NULL,
+  `detail` VARCHAR(1000) NULL,
   `e_package_ID_fk` VARCHAR(36) NULL,
   PRIMARY KEY (`enums_ID`),
   UNIQUE INDEX `enums_ID_UNIQUE` (`enums_ID` ASC),
@@ -79,7 +80,8 @@ DROP TABLE IF EXISTS `java_api`.`annotation` ;
 CREATE TABLE IF NOT EXISTS `java_api`.`annotation` (
   `annotation_ID` VARCHAR(36) NOT NULL,
   `name` VARCHAR(200) NULL,
-  `description` VARCHAR(400) NULL,
+  `summary` VARCHAR(400) NULL,
+  `detail` VARCHAR(1000) NULL,
   `a_package_ID_fk` VARCHAR(36) NULL,
   PRIMARY KEY (`annotation_ID`),
   UNIQUE INDEX `annotation_ID_UNIQUE` (`annotation_ID` ASC),
