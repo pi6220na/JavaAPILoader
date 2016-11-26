@@ -14,6 +14,7 @@ import java.util.Iterator;
 import java.util.Scanner;
 
 import static java.lang.System.exit;
+import static java.lang.Thread.sleep;
 
 /*
  * Created by Jeremy on 11/17/2016.
@@ -24,6 +25,11 @@ public class Main {
     static Scanner stringScanner = new Scanner(System.in);
     static Scanner numberScanner = new Scanner(System.in);
 
+    static int totalPackageRows = 0;
+    static int totalKlassRows = 0;
+    static int totalMethodRows = 0;
+    static int totalNullPointerExceptions = 0;
+    static int totalOtherExceptions = 0;
 
     // setup the database driver
     static final String JDBC_DRIVER = "com.mysql.cj.jdbc.Driver";
@@ -32,11 +38,18 @@ public class Main {
     static final String USER = "myrlin";
     static final String PASSWORD = "password";
 
+
+
+
     public static void main(String[] args) throws Exception { //TODO handle exceptions properly
+
+        Class.forName(JDBC_DRIVER);
+        Connection connection = DriverManager.getConnection(DB_CONNECTION_URL, USER, PASSWORD);
+
 
         FileSearch fileSearch = new FileSearch();
 
-        deleteTables();
+        deleteTables(connection);
 
         searchForFiles(fileSearch); // copied entirely from:
                                     // https://www.mkyong.com/java/search-directories-recursively-for-file-in-java/
@@ -46,22 +59,37 @@ public class Main {
             items++;
             System.out.println(items + "  processing dir = " + dir);
 
-            String packageFK = loadPackageTable(dir);
+            String packageFK = loadPackageTable(dir, connection);
 
-            loadKlassTable(packageFK, dir);
+            loadKlassTable(packageFK, dir, connection);
+
+            System.out.println();
+            System.out.println("******* end of package ********");
+            System.out.println("********* Total Package Rows = " + totalPackageRows);
+            System.out.println("********* Total Klass Rows = " + totalKlassRows);
+            System.out.println("********* Total Method Rows = " + totalMethodRows);
+
 
             }
+
+        System.out.println("*****************************************");
+        System.out.println("********* Total Package Rows = " + totalPackageRows);
+        System.out.println("********* Total Klass Rows = " + totalKlassRows);
+        System.out.println("********* Total Method Rows = " + totalMethodRows);
+        System.out.println("********* Total NullPointerExceptions = " + totalNullPointerExceptions);
+        System.out.println("********* Total OtherExceptions = " + totalOtherExceptions);
+
+        connection.close();
 
     }
 
 
 
 
-    private static String loadPackageTable(String dir) throws Exception {
+    private static String loadPackageTable(String dir, Connection connection) throws Exception {
 
-        Class.forName(JDBC_DRIVER);
+        int packageRows = 0;
 
-        Connection connection = DriverManager.getConnection(DB_CONNECTION_URL, USER, PASSWORD);
         Statement statement = connection.createStatement();
 
         java.sql.PreparedStatement pstmt = connection.prepareStatement("INSERT INTO package VALUES (?,?,?)");
@@ -89,10 +117,17 @@ public class Main {
             System.out.println("description = " + description);
 
             pstmt.setString(1, null);
+            if (nameField.length() > 200) {
+                nameField = nameField.substring(0, 199);
+            }
             pstmt.setString(2, nameField);
+            if (description.length() > 400) {
+                description = description.substring(0, 399);
+            }
             pstmt.setString(3, description);
             pstmt.executeUpdate();
 
+            packageRows++;
 
             //ResultSet rs = statement.executeQuery("SELECT * FROM package");
             sstmt.setString(1, nameField);
@@ -103,7 +138,7 @@ public class Main {
                 i++;
             }
 
-            System.out.println("package row count off select statement = " + i);
+//            System.out.println("package row count off select statement = " + i);
 
             selectRS.first();
                 System.out.println("ID: " + selectRS.getString(1));
@@ -115,29 +150,41 @@ public class Main {
             selectRS.close();
 
 
-        } catch (Exception e) {
+        } catch (NullPointerException npe) {
+            System.out.println("in loadPackage method");
+            npe.printStackTrace();
+            System.out.println();
+            totalNullPointerExceptions++;
+        }  catch (Exception e) {
             System.out.println("in loadPackage method");
             e.printStackTrace();
             System.out.println();
+            totalOtherExceptions++;
         }
 
 
         statement.close();
-        connection.close();
 
+        totalPackageRows = totalPackageRows + packageRows;
+        //sleep(500);
+        System.out.println();
+        System.out.println("Package: rows added = " + packageRows);
+        System.out.println();
         return foreignKey;
 
     } // end loadPackageTable
 
 
 
-    private static void loadKlassTable(String packageFK, String dir) throws Exception {
+    private static void loadKlassTable(String packageFK, String dir, Connection connection) throws Exception {
 
-        Connection connection = DriverManager.getConnection(DB_CONNECTION_URL, USER, PASSWORD);
+        int klassRows = 0;
+
+
         Statement statement = connection.createStatement();
 
         java.sql.PreparedStatement pstmt = connection.prepareStatement("INSERT INTO klass VALUES (?,?,?,?,?)");
-        java.sql.PreparedStatement sstmt = connection.prepareStatement("SELECT * FROM klass WHERE name = ?");
+        java.sql.PreparedStatement sstmt = connection.prepareStatement("SELECT * FROM klass WHERE k_package_ID_fk = ?");
 
 
         //File input = new File("C:/Users/myrlin/Desktop/Java/JavaDocs/docs/api/java/util/package-summary.html");
@@ -173,11 +220,14 @@ public class Main {
                     pstmt.setString(4, inputDescription);
                     pstmt.setString(5, packageFK);
                     pstmt.executeUpdate();
+
+                    klassRows++;
                 }
 
 
                 // ResultSet rs = statement.executeQuery("SELECT * FROM klass");
-                sstmt.setString(1, inputName);
+                sstmt.setString(1, packageFK);
+                System.out.println("loadKlassTable: m_klass_ID_fk = " + packageFK);
                 ResultSet selectRS = sstmt.executeQuery();
 
                 File currentDir = new File(dir);
@@ -190,38 +240,55 @@ public class Main {
 //                    System.out.println("Foreign Key: " + rs.getString(5));
 //                    System.out.println();
 
-                    loadMethodTable(selectRS.getString(3), selectRS.getString(1), currentDir);
+                    loadMethodTable(selectRS.getString(3), selectRS.getString(1), currentDir, connection);
                 }
             }
-        }
-        catch (Exception e) {
-            System.out.println("in loadKlass method");
+        } catch (NullPointerException npe) {
+            System.out.println("in loadPackage method");
+            npe.printStackTrace();
+            System.out.println();
+            totalNullPointerExceptions++;
+        }  catch (Exception e) {
+            System.out.println("in loadPackage method");
             e.printStackTrace();
             System.out.println();
+            totalOtherExceptions++;
         }
+
+
 
 //        rs.close();
         statement.close();
-        connection.close();
+
+        totalKlassRows = totalKlassRows + klassRows;
+        System.out.println();
+        System.out.println("Klass: rows added = " + klassRows);
+        System.out.println();
+        //sleep(500);
 
     } // end loadKlassTable
 
 
 
 
-    private static void loadMethodTable(String searchname, String klassFK, File directory) throws Exception {
+    private static void loadMethodTable(String searchname, String klassFK, File directory, Connection connection) throws Exception {
 
-        Connection connection = DriverManager.getConnection(DB_CONNECTION_URL, USER, PASSWORD);
+        int methodRows = 0;
+
         Statement statement = connection.createStatement();
 
         java.sql.PreparedStatement pstmt = connection.prepareStatement("INSERT INTO method VALUES (?,?,?,?,?,?)");
 
+
+        String trimName = searchname.split("<", 2)[0];
+
         File newDir = directory.getParentFile();
         System.out.println("in loadMethodTable: parent directory = " + newDir);
-        String methodFile = newDir + "\\" + searchname + ".html";
+        String methodFile = newDir + "\\" + trimName + ".html";
         File testFile = new File(methodFile);
 
         System.out.println("in loadMethodTable: filepath = " + methodFile);
+
 
 
         try {
@@ -234,51 +301,73 @@ public class Main {
                 Element table = doc.select("table[summary=Method Summary table, listing methods, and an explanation]").first();
                 Iterator<Element> iterator = table.select("td[class=colFirst], td[class=colLast]").iterator(); //, div[class=block]
 
-                String type = null;                       // type should be called modifier
+                String modifier = null;
                 String name = null;
                 String trimmed = null;
 
                 while (iterator.hasNext()) {
-                    type = iterator.next().text();
+                    modifier = iterator.next().text();
                     name = iterator.next().text();
 
                     trimmed = name.split("\\)", 2)[0];   // concept from:http://stackoverflow.com/questions/18220022/how-to-trim-a-string-after-a-specific-character-in-java
                     trimmed = trimmed + ")";
 
                     pstmt.setString(1, null);                 // ID
-                    pstmt.setString(2, type);                 // type should be called modifier
+                    if (modifier.length() > 100) {
+                        modifier = modifier.substring(0, 99);
+                    }
+                    pstmt.setString(2, modifier);             // modifier
+                    if (trimmed.length() > 200) {
+                        trimmed = trimmed.substring(0, 199);
+                    }
                     pstmt.setString(3, trimmed);              // name
+                    if (name.length() > 400) {
+                        name = name.substring(0, 399);
+                    }
                     pstmt.setString(4, name);                 // summary
                     pstmt.setString(5, null);                 // detail
                     pstmt.setString(6, klassFK);              // klass FK
                     pstmt.executeUpdate();
+
+                    methodRows++;
+
                 }
 
                 statement.close();
-                connection.close();
+
             } else {
                 System.out.println("no matching method html file found");
             }
 
-
-        } catch (Exception e) {
-            System.out.println("in loadMethod");
+        } catch (NullPointerException npe) {
+            System.out.println("in loadPackage method");
+            npe.printStackTrace();
+            System.out.println();
+            totalNullPointerExceptions++;
+        }  catch (Exception e) {
+            System.out.println("in loadPackage method");
             e.printStackTrace();
             System.out.println();
+            totalOtherExceptions++;
         }
+
+
+
+        totalMethodRows = totalMethodRows + methodRows;
+        //sleep(500);
+        System.out.println();
+        System.out.println("Method: rows added = " + methodRows);
+        System.out.println();
 
     }
 
 
 
-    private static void deleteTables() throws Exception {
+    private static void deleteTables(Connection connection) throws Exception {
 
-        Class.forName(JDBC_DRIVER);
-        Connection connection = DriverManager.getConnection(DB_CONNECTION_URL, USER, PASSWORD);
 
         Statement statement = connection.createStatement();
 
-        statement.execute("DELETE FROM constant");
         statement.execute("DELETE FROM constructor");
         statement.execute("DELETE FROM field");
         statement.execute("DELETE FROM method");
@@ -293,7 +382,6 @@ public class Main {
         statement.execute("DELETE FROM package");
 
         statement.close();
-        connection.close();
 
     }
 
