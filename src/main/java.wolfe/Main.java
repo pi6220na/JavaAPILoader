@@ -1,4 +1,3 @@
-//package java.wolfe;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -11,19 +10,13 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.Iterator;
-import java.util.Scanner;
 
-import static java.lang.System.exit;
-import static java.lang.Thread.sleep;
 
 /*
  * Created by Jeremy on 11/17/2016.
  */
 
 public class Main {
-
-    static Scanner stringScanner = new Scanner(System.in);
-    static Scanner numberScanner = new Scanner(System.in);
 
     static int totalPackageRows = 0;
     static int totalKlassRows = 0;
@@ -39,13 +32,10 @@ public class Main {
     static final String PASSWORD = "password";
 
 
-
-
     public static void main(String[] args) throws Exception { //TODO handle exceptions properly
 
         Class.forName(JDBC_DRIVER);
         Connection connection = DriverManager.getConnection(DB_CONNECTION_URL, USER, PASSWORD);
-
 
         FileSearch fileSearch = new FileSearch();
 
@@ -85,7 +75,9 @@ public class Main {
 
 
 
-
+    // each package-summary.html file drives this method where sub-items are selected
+    // using the JSoup library to pull information from the html. Database tables are
+    // loaded from the scrapped info.
     private static String loadPackageTable(String dir, Connection connection) throws Exception {
 
         int packageRows = 0;
@@ -137,8 +129,6 @@ public class Main {
             while (selectRS.next()) {
                 i++;
             }
-
-//            System.out.println("package row count off select statement = " + i);
 
             selectRS.first();
                 System.out.println("ID: " + selectRS.getString(1));
@@ -209,23 +199,21 @@ public class Main {
                     if (inputName.length() > 200) {
                         inputName = inputName.substring(0, 199);
                     }
-                    String inputDescription = iterator.next().text();
-                    if (inputDescription.length() > 400) {
-                        inputDescription = inputDescription.substring(0, 399);
+                    String inputSummary = iterator.next().text();
+                    if (inputSummary.length() > 400) {
+                        inputSummary = inputSummary.substring(0, 399);
                     }
 
                     pstmt.setString(1, null);
                     pstmt.setString(2, "1");
                     pstmt.setString(3, inputName);
-                    pstmt.setString(4, inputDescription);
+                    pstmt.setString(4, inputSummary);
                     pstmt.setString(5, packageFK);
                     pstmt.executeUpdate();
 
                     klassRows++;
                 }
 
-
-                // ResultSet rs = statement.executeQuery("SELECT * FROM klass");
                 sstmt.setString(1, packageFK);
                 System.out.println("loadKlassTable: m_klass_ID_fk = " + packageFK);
                 ResultSet selectRS = sstmt.executeQuery();
@@ -242,6 +230,9 @@ public class Main {
 
                     loadMethodTable(selectRS.getString(3), selectRS.getString(1), currentDir, connection);
                 }
+
+                selectRS.close();
+
             }
         } catch (NullPointerException npe) {
             System.out.println("in loadPackage method");
@@ -256,15 +247,12 @@ public class Main {
         }
 
 
-
-//        rs.close();
         statement.close();
 
         totalKlassRows = totalKlassRows + klassRows;
         System.out.println();
         System.out.println("Klass: rows added = " + klassRows);
         System.out.println();
-        //sleep(500);
 
     } // end loadKlassTable
 
