@@ -9,6 +9,8 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.util.Iterator;
 
 
@@ -20,7 +22,11 @@ public class Main {
 
     static int totalPackageRows = 0;
     static int totalKlassRows = 0;
+    static int totalExceptionRows = 0;
+    static int totalErrorsRows = 0;
     static int totalMethodRows = 0;
+    static int totalConstructorRows = 0;
+    static int totalFieldRows = 0;
     static int totalNullPointerExceptions = 0;
     static int totalOtherExceptions = 0;
 
@@ -31,12 +37,15 @@ public class Main {
     static final String USER = "myrlin";
     static final String PASSWORD = "password";
 
-
     public static void main(String[] args) throws Exception { //TODO handle exceptions properly
 
 
-        String classSummarySearch = "table[summary=Class Summary table, listing classes, and an explanation]";
-        String interfaceSummarySearch = "table[summary=Interface Summary table, listing interfaces, and an explanation]";
+        long start = System.currentTimeMillis();
+
+        String classSumSearch = "table[summary=Class Summary table, listing classes, and an explanation]";
+        String interfaceSumSearch = "table[summary=Interface Summary table, listing interfaces, and an explanation]";
+        String exceptionSumSearch = "table[summary=Exception Summary table, listing exceptions, and an explanation]";
+        String errorsSumSearch = "table[summary=Error Summary table, listing errors, and an explanation]";
 
         Class.forName(JDBC_DRIVER);
         Connection connection = DriverManager.getConnection(DB_CONNECTION_URL, USER, PASSWORD);
@@ -44,6 +53,8 @@ public class Main {
         FileSearch fileSearch = new FileSearch();
 
         deleteTables(connection);
+
+//        System.exit(0);
 
         searchForFiles(fileSearch); // copied entirely from:
                                     // https://www.mkyong.com/java/search-directories-recursively-for-file-in-java/
@@ -55,30 +66,45 @@ public class Main {
 
             String packageFK = loadPackageTable(dir, connection);
 
-            loadKlassTable(packageFK, dir, connection, classSummarySearch, "1");
-            loadKlassTable(packageFK, dir, connection, interfaceSummarySearch, "2");
+            loadKlassTable(packageFK, dir, connection, classSumSearch, "1");
+            loadKlassTable(packageFK, dir, connection, interfaceSumSearch, "2");
+
+            loadExceptionTable(packageFK, dir, connection, exceptionSumSearch);
+            loadErrorsTable(packageFK, dir, connection, errorsSumSearch);
 
             System.out.println();
             System.out.println("******* end of package ********");
             System.out.println("********* Total Package Rows = " + totalPackageRows);
             System.out.println("********* Total Klass Rows = " + totalKlassRows);
+            System.out.println("********* Total Exception Rows = " + totalExceptionRows);
+            System.out.println("********* Total Errors Rows = " + totalErrorsRows);
             System.out.println("********* Total Method Rows = " + totalMethodRows);
+            System.out.println("********* Total Field Rows = " + totalFieldRows);
+            System.out.println("********* Total Constructor Rows = " + totalConstructorRows);
 
-
-            }
+        }
 
         System.out.println("*****************************************");
         System.out.println("********* Total Package Rows = " + totalPackageRows);
         System.out.println("********* Total Klass Rows = " + totalKlassRows);
+        System.out.println("********* Total Exception Rows = " + totalExceptionRows);
+        System.out.println("********* Total Errors Rows = " + totalErrorsRows);
         System.out.println("********* Total Method Rows = " + totalMethodRows);
+        System.out.println("********* Total Field Rows = " + totalFieldRows);
+        System.out.println("********* Total Constructor Rows = " + totalConstructorRows);
+        System.out.println("*****************************************");
         System.out.println("********* Total NullPointerExceptions = " + totalNullPointerExceptions);
         System.out.println("********* Total OtherExceptions = " + totalOtherExceptions);
+        System.out.println("*****************************************");
 
         connection.close();
 
+        // http://stackoverflow.com/questions/5204051/how-to-calculate-the-running-time-of-my-program
+        long end = System.currentTimeMillis();
+        NumberFormat formatter = new DecimalFormat("#0.00000");
+        System.out.print("Execution time is " + formatter.format((end - start) / 1000d) + " seconds");
+
     }
-
-
 
     // each package-summary.html file drives this method where sub-items are selected
     // using the JSoup library to pull information from the html. Database tables are
@@ -239,6 +265,8 @@ public class Main {
 //                    System.out.println();
 
                     loadMethodTable(selectRS.getString(3), selectRS.getString(1), currentDir, connection);
+                    loadFieldTable(selectRS.getString(3), selectRS.getString(1), currentDir, connection);
+                    loadConstructorTable(selectRS.getString(3), selectRS.getString(1), currentDir, connection);
                 }
 
                 selectRS.close();
@@ -268,8 +296,187 @@ public class Main {
 
 
 
+    private static void loadExceptionTable(String packageFK, String dir, Connection connection, String searchOn) throws Exception {
 
-    private static void loadMethodTable(String searchname, String klassFK, File directory, Connection connection) throws Exception {
+        int exceptionRows = 0;
+
+        Statement statement = connection.createStatement();
+
+        java.sql.PreparedStatement pstmt = connection.prepareStatement("INSERT INTO exception VALUES (?,?,?,?,?)");
+        java.sql.PreparedStatement sstmt = connection.prepareStatement("SELECT * FROM exception WHERE x_package_ID_fk = ?");
+
+
+        //File input = new File("C:/Users/myrlin/Desktop/Java/JavaDocs/docs/api/java/util/package-summary.html");
+        File input = new File(dir);
+        Document doc = Jsoup.parse(input, "UTF-8");
+
+
+
+        // Element table = doc.select("table[summary=Interface Summary table, listing interfaces, and an explanation]").first();
+        // Element table = doc.select("table[summary=Class Summary table, listing classes, and an explanation]").first();
+        Element table = doc.select(searchOn).first();
+
+
+        String inputName = null;
+        try {
+            if (table.hasText()) {
+
+                Iterator<Element> iterator = table.select("td").iterator();
+                int count = 1;
+                while(iterator.hasNext()) {
+
+                    inputName = iterator.next().text();
+                    if (inputName.length() > 200) {
+                        inputName = inputName.substring(0, 199);
+                    }
+                    String inputSummary = iterator.next().text();
+                    if (inputSummary.length() > 400) {
+                        inputSummary = inputSummary.substring(0, 399);
+                    }
+
+                    pstmt.setString(1, null);
+                    pstmt.setString(2, inputName);
+                    pstmt.setString(3, inputSummary);
+                    pstmt.setString(4, null);
+                    pstmt.setString(5, packageFK);
+                    pstmt.executeUpdate();
+
+                    exceptionRows++;
+                }
+
+                sstmt.setString(1, packageFK);
+                System.out.println("loadException: x_package_ID_fk = " + packageFK);
+                ResultSet selectRS = sstmt.executeQuery();
+
+                File currentDir = new File(dir);
+
+                while (selectRS.next()) {
+                    System.out.println("Exception ID: " + selectRS.getString(1));
+//                    System.out.println("Type: " + rs.getString(2));
+                    System.out.println("Exception Name: " + selectRS.getString(3));
+//                    System.out.println("Description: " + rs.getString(4));
+//                    System.out.println("Foreign Key: " + rs.getString(5));
+//                    System.out.println();
+
+                }
+
+                selectRS.close();
+
+            }
+        } catch (NullPointerException npe) {
+            System.out.println("in loadException method");
+            npe.printStackTrace();
+            System.out.println();
+            totalNullPointerExceptions++;
+        }  catch (Exception e) {
+            System.out.println("in loadException method");
+            e.printStackTrace();
+            System.out.println();
+            totalOtherExceptions++;
+        }
+
+
+        statement.close();
+
+        totalExceptionRows = totalExceptionRows + exceptionRows;
+        System.out.println();
+        System.out.println("Exception: rows added = " + exceptionRows);
+        System.out.println();
+
+    }
+
+    private static void loadErrorsTable(String packageFK, String dir, Connection connection, String searchOn) throws Exception{
+
+        int errorsRows = 0;
+
+        Statement statement = connection.createStatement();
+
+        java.sql.PreparedStatement pstmt = connection.prepareStatement("INSERT INTO errors VALUES (?,?,?,?,?)");
+        java.sql.PreparedStatement sstmt = connection.prepareStatement("SELECT * FROM errors WHERE r_package_ID_fk = ?");
+
+
+        //File input = new File("C:/Users/myrlin/Desktop/Java/JavaDocs/docs/api/java/util/package-summary.html");
+        File input = new File(dir);
+        Document doc = Jsoup.parse(input, "UTF-8");
+
+
+        // Element table = doc.select("table[summary=Interface Summary table, listing interfaces, and an explanation]").first();
+        // Element table = doc.select("table[summary=Class Summary table, listing classes, and an explanation]").first();
+        Element table = doc.select(searchOn).first();
+
+
+        String inputName = null;
+        try {
+            if (table.hasText()) {
+
+                Iterator<Element> iterator = table.select("td").iterator();
+                int count = 1;
+                while(iterator.hasNext()) {
+
+                    inputName = iterator.next().text();
+                    if (inputName.length() > 200) {
+                        inputName = inputName.substring(0, 199);
+                    }
+                    String inputSummary = iterator.next().text();
+                    if (inputSummary.length() > 400) {
+                        inputSummary = inputSummary.substring(0, 399);
+                    }
+
+                    pstmt.setString(1, null);
+                    pstmt.setString(2, inputName);
+                    pstmt.setString(3, inputSummary);
+                    pstmt.setString(4, null);
+                    pstmt.setString(5, packageFK);
+                    pstmt.executeUpdate();
+
+                    errorsRows++;
+                }
+
+                sstmt.setString(1, packageFK);
+                System.out.println("loadErrors: r_package_ID_fk = " + packageFK);
+                ResultSet selectRS = sstmt.executeQuery();
+
+                File currentDir = new File(dir);
+
+                while (selectRS.next()) {
+                    System.out.println("Error ID: " + selectRS.getString(1));
+//                    System.out.println("Type: " + rs.getString(2));
+                    System.out.println("Error Name: " + selectRS.getString(3));
+//                    System.out.println("Description: " + rs.getString(4));
+//                    System.out.println("Foreign Key: " + rs.getString(5));
+//                    System.out.println();
+
+                }
+
+                selectRS.close();
+
+            }
+        } catch (NullPointerException npe) {
+            System.out.println("in loadErrors method");
+            npe.printStackTrace();
+            System.out.println();
+            totalNullPointerExceptions++;
+        }  catch (Exception e) {
+            System.out.println("in loadErrors method");
+            e.printStackTrace();
+            System.out.println();
+            totalOtherExceptions++;
+        }
+
+
+        statement.close();
+
+        totalErrorsRows = totalErrorsRows + errorsRows;
+        System.out.println();
+        System.out.println("Errors: rows added = " + errorsRows);
+        System.out.println();
+
+    }
+
+
+
+
+    private static void loadMethodTable(String searchname, String klassID, File directory, Connection connection) throws Exception {
 
         int methodRows = 0;
 
@@ -324,7 +531,7 @@ public class Main {
                     }
                     pstmt.setString(4, name);                 // summary
                     pstmt.setString(5, null);                 // detail
-                    pstmt.setString(6, klassFK);              // klass FK
+                    pstmt.setString(6, klassID);              // klass ID
                     pstmt.executeUpdate();
 
                     methodRows++;
@@ -338,12 +545,12 @@ public class Main {
             }
 
         } catch (NullPointerException npe) {
-            System.out.println("in loadPackage method");
+            System.out.println("in loadMethod method");
             npe.printStackTrace();
             System.out.println();
             totalNullPointerExceptions++;
         }  catch (Exception e) {
-            System.out.println("in loadPackage method");
+            System.out.println("in loadMethod method");
             e.printStackTrace();
             System.out.println();
             totalOtherExceptions++;
@@ -359,6 +566,193 @@ public class Main {
 
     }
 
+
+    private static void loadConstructorTable(String searchname,
+                                             String klassID,
+                                             File directory,
+                                             Connection connection) throws Exception {
+
+        int constructorRows = 0;
+
+        Statement statement = connection.createStatement();
+
+        java.sql.PreparedStatement pstmt = connection.prepareStatement("INSERT INTO constructor VALUES (?,?,?,?,?,?)");
+
+
+        String trimName = searchname.split("<", 2)[0];
+
+        File newDir = directory.getParentFile();
+        System.out.println("in loadConstructorTable: parent directory = " + newDir);
+        String methodFile = newDir + "\\" + trimName + ".html";
+        File testFile = new File(methodFile);
+
+        System.out.println("in loadConstructorTable: filepath = " + methodFile);
+
+
+
+        try {
+            if (testFile.isFile()) {
+                File input = new File(methodFile);
+                //File input = new File("C:/Users/myrlin/Desktop/Java/JavaDocs/docs/api/java/util/Arraylist.html");
+                Document doc = Jsoup.parse(input, "UTF-8");
+
+
+                Element table = doc.select("table[summary=Constructor Summary table, listing constructors, and an explanation]").first();
+                Iterator<Element> iterator = table.select("td[class=colFirst], td[class=colLast]").iterator(); //, div[class=block]
+
+                String modifier = null;
+                String name = null;
+                String trimmed = null;
+
+                while (iterator.hasNext()) {
+                    modifier = iterator.next().text();
+                    name = iterator.next().text();
+
+                    trimmed = name.split("\\)", 2)[0];   // concept from:http://stackoverflow.com/questions/18220022/how-to-trim-a-string-after-a-specific-character-in-java
+                    trimmed = trimmed + ")";
+
+                    pstmt.setString(1, null);                 // ID
+                    if (modifier.length() > 100) {
+                        modifier = modifier.substring(0, 99);
+                    }
+                    pstmt.setString(2, modifier);             // modifier
+                    if (trimmed.length() > 200) {
+                        trimmed = trimmed.substring(0, 199);
+                    }
+                    pstmt.setString(3, trimmed);              // name
+                    if (name.length() > 400) {
+                        name = name.substring(0, 399);
+                    }
+                    pstmt.setString(4, name);                 // summary
+                    pstmt.setString(5, null);                 // detail
+                    pstmt.setString(6, klassID);              // klass ID
+                    pstmt.executeUpdate();
+
+
+                    constructorRows++;
+
+                }
+
+                statement.close();
+
+            } else {
+                System.out.println("no matching constructor html file found");
+            }
+
+        } catch (NullPointerException npe) {
+            System.out.println("in loadConstructor method");
+            npe.printStackTrace();
+            System.out.println();
+            totalNullPointerExceptions++;
+        }  catch (Exception e) {
+            System.out.println("in loadConstructor method");
+            e.printStackTrace();
+            System.out.println();
+            totalOtherExceptions++;
+        }
+
+
+
+        totalConstructorRows = totalConstructorRows + constructorRows;
+        //sleep(500);
+        System.out.println();
+        System.out.println("Constructor rows added = " + constructorRows);
+        System.out.println();
+
+
+    }
+
+
+    private static void loadFieldTable(String searchname,
+                                       String klassID,
+                                       File directory,
+                                       Connection connection) throws Exception {
+
+        int fieldRows = 0;
+
+        Statement statement = connection.createStatement();
+
+        java.sql.PreparedStatement pstmt = connection.prepareStatement("INSERT INTO field VALUES (?,?,?,?,?,?)");
+
+
+        String trimName = searchname.split("<", 2)[0];
+
+        File newDir = directory.getParentFile();
+        System.out.println("in loadFieldTable: parent directory = " + newDir);
+        String methodFile = newDir + "\\" + trimName + ".html";
+        File testFile = new File(methodFile);
+
+        System.out.println("in loadFieldTable: filepath = " + methodFile);
+
+        try {
+            if (testFile.isFile()) {
+                File input = new File(methodFile);
+                //File input = new File("C:/Users/myrlin/Desktop/Java/JavaDocs/docs/api/java/util/Arraylist.html");
+                Document doc = Jsoup.parse(input, "UTF-8");
+
+
+                Element table = doc.select("table[summary=Field Summary table, listing fields, and an explanation]").first();
+                Iterator<Element> iterator = table.select("td[class=colFirst], td[class=colLast]").iterator(); //, div[class=block]
+
+                String modifier = null;
+                String name = null;
+                String trimmed = null;
+
+                while (iterator.hasNext()) {
+                    modifier = iterator.next().text();
+                    name = iterator.next().text();
+
+                    trimmed = name.split("\\)", 2)[0];   // concept from:http://stackoverflow.com/questions/18220022/how-to-trim-a-string-after-a-specific-character-in-java
+                    trimmed = trimmed + ")";
+
+                    pstmt.setString(1, null);                 // ID
+                    if (modifier.length() > 100) {
+                        modifier = modifier.substring(0, 99);
+                    }
+                    pstmt.setString(2, modifier);             // modifier
+                    if (trimmed.length() > 200) {
+                        trimmed = trimmed.substring(0, 199);
+                    }
+                    pstmt.setString(3, trimmed);              // name
+                    if (name.length() > 400) {
+                        name = name.substring(0, 399);
+                    }
+                    pstmt.setString(4, name);                 // summary
+                    pstmt.setString(5, null);                 // detail
+                    pstmt.setString(6, klassID);              // klass ID
+                    pstmt.executeUpdate();
+
+                    fieldRows++;
+
+                }
+
+                statement.close();
+
+            } else {
+                System.out.println("no matching field html file found");
+            }
+
+        } catch (NullPointerException npe) {
+            System.out.println("in loadField method");
+            npe.printStackTrace();
+            System.out.println();
+            totalNullPointerExceptions++;
+        }  catch (Exception e) {
+            System.out.println("in loadField method");
+            e.printStackTrace();
+            System.out.println();
+            totalOtherExceptions++;
+        }
+
+
+
+        totalFieldRows = totalFieldRows + fieldRows;
+        //sleep(500);
+        System.out.println();
+        System.out.println("Field rows added = " + fieldRows);
+        System.out.println();
+
+    }
 
 
     private static void deleteTables(Connection connection) throws Exception {
