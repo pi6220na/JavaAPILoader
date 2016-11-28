@@ -1,3 +1,4 @@
+//package java.wolfe;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -52,7 +53,7 @@ public class Main {
 
         FileSearch fileSearch = new FileSearch();
 
-        deleteTables(connection);
+//        deleteTables(connection);   // comment out when run second job with javax lib
 
 //        System.exit(0);
 
@@ -860,7 +861,7 @@ public class Main {
 
         //try different directory and filename :)
         //  fileSearch.searchDirectory(new File("/Users/mkyong/websites"), "post.php");
-        searchDirectory(new File("C:\\Users\\myrlin\\Desktop\\Java\\JavaDocs\\docs\\api\\java"), "package-summary.html", fileSearch);
+        searchDirectory(new File("C:\\Users\\myrlin\\Desktop\\Java\\JavaDocs\\docs\\api\\javax"), "package-summary.html", fileSearch);
         //searchDirectory(new File("C:\\Users\\myrlin\\Desktop\\Java\\JavaDocs\\docs\\api"), "package-summary.html", fileSearch);
 
         int count = fileSearch.getResult().size();

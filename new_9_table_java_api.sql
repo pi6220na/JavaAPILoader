@@ -124,6 +124,7 @@ DROP TABLE IF EXISTS `java_api`.`constructor` ;
 
 CREATE TABLE IF NOT EXISTS `java_api`.`constructor` (
   `constructor_ID` VARCHAR(36) NOT NULL,
+  `modifier` VARCHAR(100) NULL,
   `name` VARCHAR(200) NULL,
   `summary` VARCHAR(400) NULL,
   `detail` VARCHAR(1000) NULL,
@@ -146,6 +147,7 @@ DROP TABLE IF EXISTS `java_api`.`field` ;
 
 CREATE TABLE IF NOT EXISTS `java_api`.`field` (
   `field_ID` VARCHAR(36) NOT NULL,
+  `modifier` VARCHAR(100) NULL,
   `name` VARCHAR(200) NULL,
   `summary` VARCHAR(400) NULL,
   `detail` VARCHAR(1000) NULL,
