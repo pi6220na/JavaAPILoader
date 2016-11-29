@@ -1,15 +1,43 @@
 //package java.wolfe;
 
+/*
+*   Java 2545 MCTC Final Project - Part One of Two
+*   Database Loader
+*   Jeremy Wolfe, November 28, 2016
+*
+*   This program loads the Java_API database with data scrapped from
+*   the Java SE 8 API Documentation (downloaded version).
+*   Uses Library JSoup to select and extract information from
+*   .html files.
+*
+*   Java API package-summary.html files have been created at the package level and
+*   drive the loading process. Summaries are scanned through and tables loaded with
+ *   names and descriptions/summaries. Level 3 tables are loaded from .html files
+ *   built from the class name.
+ *
+*   7 tables are loaded:
+*   package         level 1
+*   class (klass)   level 2 - points back to package table
+*   exception       level 2
+*   errors          level 2
+*   method          level 3 - points back to class table
+*   field           level 3
+*   constructor     level 3
+*
+*   This database is used by a Java GUI program to search and access the data
+*   (part two of two programs).
+*
+*
+ */
+
+
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import java.io.File;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.Statement;
+import java.sql.*;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.Iterator;
@@ -30,6 +58,7 @@ public class Main {
     static int totalFieldRows = 0;
     static int totalNullPointerExceptions = 0;
     static int totalOtherExceptions = 0;
+    static int totalSQLExceptions = 0;
 
     // setup the database driver
     static final String JDBC_DRIVER = "com.mysql.cj.jdbc.Driver";
@@ -43,6 +72,7 @@ public class Main {
 
         long start = System.currentTimeMillis();
 
+        // strings used in JSoup select statements
         String classSumSearch = "table[summary=Class Summary table, listing classes, and an explanation]";
         String interfaceSumSearch = "table[summary=Interface Summary table, listing interfaces, and an explanation]";
         String exceptionSumSearch = "table[summary=Exception Summary table, listing exceptions, and an explanation]";
@@ -51,15 +81,18 @@ public class Main {
         Class.forName(JDBC_DRIVER);
         Connection connection = DriverManager.getConnection(DB_CONNECTION_URL, USER, PASSWORD);
 
+        // instantiate a filesearch object to scan the API directories
         FileSearch fileSearch = new FileSearch();
 
 //        deleteTables(connection);   // comment out when run second job with javax lib
 
 //        System.exit(0);
 
+        // find all package-summary.html files for the /java or /javax directories
         searchForFiles(fileSearch); // copied entirely from:
                                     // https://www.mkyong.com/java/search-directories-recursively-for-file-in-java/
 
+        // main loop steps through each package-summary.html file and calls load table methods
         int items = 0;
         for (String dir : fileSearch.getResult()){
             items++;
@@ -95,6 +128,7 @@ public class Main {
         System.out.println("********* Total Constructor Rows = " + totalConstructorRows);
         System.out.println("*****************************************");
         System.out.println("********* Total NullPointerExceptions = " + totalNullPointerExceptions);
+        System.out.println("********* Total SQLExceptions = " + totalSQLExceptions);
         System.out.println("********* Total OtherExceptions = " + totalOtherExceptions);
         System.out.println("*****************************************");
 
@@ -177,13 +211,17 @@ public class Main {
             npe.printStackTrace();
             System.out.println();
             totalNullPointerExceptions++;
+        } catch (SQLException sqle) {
+            System.out.println("in loadPackage method");
+            sqle.printStackTrace();
+            System.out.println();
+            totalSQLExceptions++;
         }  catch (Exception e) {
             System.out.println("in loadPackage method");
             e.printStackTrace();
             System.out.println();
             totalOtherExceptions++;
         }
-
 
         statement.close();
 
@@ -274,12 +312,17 @@ public class Main {
 
             }
         } catch (NullPointerException npe) {
-            System.out.println("in loadPackage method");
+            System.out.println("in loadKlass method");
             npe.printStackTrace();
             System.out.println();
             totalNullPointerExceptions++;
+        } catch (SQLException sqle) {
+            System.out.println("in loadKlass method");
+            sqle.printStackTrace();
+            System.out.println();
+            totalSQLExceptions++;
         }  catch (Exception e) {
-            System.out.println("in loadPackage method");
+            System.out.println("in loadKlass method");
             e.printStackTrace();
             System.out.println();
             totalOtherExceptions++;
@@ -369,6 +412,11 @@ public class Main {
             npe.printStackTrace();
             System.out.println();
             totalNullPointerExceptions++;
+        } catch (SQLException sqle) {
+            System.out.println("in loadException method");
+            sqle.printStackTrace();
+            System.out.println();
+            totalSQLExceptions++;
         }  catch (Exception e) {
             System.out.println("in loadException method");
             e.printStackTrace();
@@ -457,6 +505,11 @@ public class Main {
             npe.printStackTrace();
             System.out.println();
             totalNullPointerExceptions++;
+        } catch (SQLException sqle) {
+            System.out.println("in loadErrors method");
+            sqle.printStackTrace();
+            System.out.println();
+            totalSQLExceptions++;
         }  catch (Exception e) {
             System.out.println("in loadErrors method");
             e.printStackTrace();
@@ -550,6 +603,11 @@ public class Main {
             npe.printStackTrace();
             System.out.println();
             totalNullPointerExceptions++;
+        } catch (SQLException sqle) {
+            System.out.println("in loadMethod method");
+            sqle.printStackTrace();
+            System.out.println();
+            totalSQLExceptions++;
         }  catch (Exception e) {
             System.out.println("in loadMethod method");
             e.printStackTrace();
@@ -645,6 +703,11 @@ public class Main {
             npe.printStackTrace();
             System.out.println();
             totalNullPointerExceptions++;
+        } catch (SQLException sqle) {
+            System.out.println("in loadConstructor method");
+            sqle.printStackTrace();
+            System.out.println();
+            totalSQLExceptions++;
         }  catch (Exception e) {
             System.out.println("in loadConstructor method");
             e.printStackTrace();
@@ -738,6 +801,11 @@ public class Main {
             npe.printStackTrace();
             System.out.println();
             totalNullPointerExceptions++;
+        } catch (SQLException sqle) {
+            System.out.println("in loadField method");
+            sqle.printStackTrace();
+            System.out.println();
+            totalSQLExceptions++;
         }  catch (Exception e) {
             System.out.println("in loadField method");
             e.printStackTrace();
@@ -778,79 +846,6 @@ public class Main {
 
     }
 
-    private static void holdStuff() throws Exception{
-
-        Class.forName(JDBC_DRIVER);
-        Connection connection = DriverManager.getConnection(DB_CONNECTION_URL, USER, PASSWORD);
-
-        Statement statement = connection.createStatement();
-
-        /*
-        statement.execute("CREATE TABLE IF NOT EXISTS CubeInfo (THING VARCHAR(50), SECSOLVE FLOAT)");
-        statement.execute("INSERT INTO CubeInfo VALUES ('Cubestormer II robot', 5.27) ");
-        statement.execute("INSERT INTO CubeInfo VALUES ('Fakhri Raihaan (using his feet)', 27.93) ");
-        statement.execute("INSERT INTO CubeInfo VALUES ('Ruxin Liu (age 3)', 99.33) ");
-        statement.execute("INSERT INTO CubeInfo VALUES ('Mats Valk (human record holder)', 6.27) ");
-        */
-
-        ResultSet rs = statement.executeQuery("SELECT * FROM package");
-        while (rs.next()) {
-            System.out.println("ID: " + rs.getString(1));
-            System.out.println("Name: " + rs.getString(2));
-            System.out.println("Description: " + rs.getString(3));
-            System.out.println();
-        }
-
-        rs = statement.executeQuery("SELECT * FROM klass");
-        while (rs.next()) {
-            System.out.println("ID: " + rs.getString(1));
-            System.out.println("Name: " + rs.getString(2));
-            System.out.println("Description: " + rs.getString(3));
-            System.out.println("FK ID: " + rs.getString(4));
-            System.out.println();
-        }
-
-        /*
-        System.out.println("Enter the thing's name: ");
-        String name = stringScanner.nextLine();
-        System.out.println("Enter the thing's time to solve in seconds: ");
-        float solveTime = numberScanner.nextFloat();
-
-        // https://www.tutorialspoint.com/javaexamples/jdbc_prepared_statement.htm
-        java.sql.PreparedStatement pstmt = connection.prepareStatement("INSERT INTO CubeInfo VALUES (?,?)");
-        pstmt.setString(1, name );
-        pstmt.setFloat(2, solveTime );
-        pstmt.executeUpdate();
-
-        pstmt = connection.prepareStatement("UPDATE CubeInfo SET SECSOLVE=5.55 WHERE THING='Mats Valk (human record holder)'");
-        pstmt.executeUpdate();
-
-
-        rs = statement.executeQuery("SELECT * FROM CubeInfo");
-        while (rs.next()) {
-            System.out.println("The Thing is " + rs.getString(1));
-            System.out.println("The Time taken is " + rs.getFloat(2));
-            System.out.println();
-        }
-
-        statement.execute("DROP TABLE CubeInfo");
-        */
-
-
-
-        // statement.execute("DROP TABLE klass");
-        // statement.execute("DROP TABLE package");
-        statement.execute("DELETE FROM package");
-        statement.execute("DELETE FROM klass");
-
-
-        rs.close();
-        statement.close();
-        connection.close();
-
-
-
-    }
 
 
     // copied entirely from:
