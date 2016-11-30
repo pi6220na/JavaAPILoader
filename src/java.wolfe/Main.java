@@ -37,6 +37,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import java.io.File;
+import java.io.IOException;
 import java.sql.*;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
@@ -59,6 +60,7 @@ public class Main {
     static int totalNullPointerExceptions = 0;
     static int totalOtherExceptions = 0;
     static int totalSQLExceptions = 0;
+    static int totalIOExceptions = 0;
 
     // setup the database driver
     static final String JDBC_DRIVER = "com.mysql.cj.jdbc.Driver";
@@ -67,7 +69,7 @@ public class Main {
     static final String USER = "myrlin";
     static final String PASSWORD = "password";
 
-    public static void main(String[] args) throws Exception { //TODO handle exceptions properly
+    public static void main(String[] args) {
 
 
         long start = System.currentTimeMillis();
@@ -78,8 +80,25 @@ public class Main {
         String exceptionSumSearch = "table[summary=Exception Summary table, listing exceptions, and an explanation]";
         String errorsSumSearch = "table[summary=Error Summary table, listing errors, and an explanation]";
 
-        Class.forName(JDBC_DRIVER);
-        Connection connection = DriverManager.getConnection(DB_CONNECTION_URL, USER, PASSWORD);
+        Connection connection = null;
+
+        try {
+
+            Class.forName(JDBC_DRIVER);
+            connection = DriverManager.getConnection(DB_CONNECTION_URL, USER, PASSWORD);
+
+        } catch (ClassNotFoundException cnfe) {
+            System.out.println("in main method");
+            cnfe.printStackTrace();
+            System.out.println();
+            totalOtherExceptions++;
+        } catch (SQLException sqle) {
+            System.out.println("in main method");
+            sqle.printStackTrace();
+            System.out.println();
+            totalSQLExceptions++;
+        }
+
 
         // instantiate a filesearch object to scan the API directories
         FileSearch fileSearch = new FileSearch();
@@ -98,13 +117,21 @@ public class Main {
             items++;
             System.out.println(items + "  processing dir = " + dir);
 
-            String packageFK = loadPackageTable(dir, connection);
+            try {
+                String packageFK = loadPackageTable(dir, connection);
 
-            loadKlassTable(packageFK, dir, connection, classSumSearch, "1");
-            loadKlassTable(packageFK, dir, connection, interfaceSumSearch, "2");
+                loadKlassTable(packageFK, dir, connection, classSumSearch, "1");
+                loadKlassTable(packageFK, dir, connection, interfaceSumSearch, "2");
 
-            loadExceptionTable(packageFK, dir, connection, exceptionSumSearch);
-            loadErrorsTable(packageFK, dir, connection, errorsSumSearch);
+                loadExceptionTable(packageFK, dir, connection, exceptionSumSearch);
+                loadErrorsTable(packageFK, dir, connection, errorsSumSearch);
+
+            } catch (NullPointerException npe) {
+                System.out.println("in main method");
+                npe.printStackTrace();
+                System.out.println();
+                totalNullPointerExceptions++;
+            }
 
             System.out.println();
             System.out.println("******* end of package ********");
@@ -129,11 +156,18 @@ public class Main {
         System.out.println("*****************************************");
         System.out.println("********* Total NullPointerExceptions = " + totalNullPointerExceptions);
         System.out.println("********* Total SQLExceptions = " + totalSQLExceptions);
+        System.out.println("********* Total IOExceptions = " + totalIOExceptions);
         System.out.println("********* Total OtherExceptions = " + totalOtherExceptions);
         System.out.println("*****************************************");
 
-        connection.close();
-
+        try {
+            connection.close();
+        } catch (SQLException sqle) {
+            System.out.println("in main method");
+            sqle.printStackTrace();
+            System.out.println();
+            totalSQLExceptions++;
+        }
         // http://stackoverflow.com/questions/5204051/how-to-calculate-the-running-time-of-my-program
         long end = System.currentTimeMillis();
         NumberFormat formatter = new DecimalFormat("#0.00000");
@@ -144,19 +178,37 @@ public class Main {
     // each package-summary.html file drives this method where sub-items are selected
     // using the JSoup library to pull information from the html. Database tables are
     // loaded from the scrapped info.
-    private static String loadPackageTable(String dir, Connection connection) throws Exception {
+    private static String loadPackageTable(String dir, Connection connection) {
 
         int packageRows = 0;
 
-        Statement statement = connection.createStatement();
+        Statement statement = null;
+        java.sql.PreparedStatement pstmt = null;
+        java.sql.PreparedStatement sstmt = null;
+        Document doc = null;
 
-        java.sql.PreparedStatement pstmt = connection.prepareStatement("INSERT INTO package VALUES (?,?,?)");
-        java.sql.PreparedStatement sstmt = connection.prepareStatement("SELECT * FROM package WHERE name = ?");
+        try {
 
-        //File input = new File("C:/Users/myrlin/Desktop/Java/JavaDocs/docs/api/java/util/package-summary.html");
-        File input = new File(dir);
-        Document doc = Jsoup.parse(input, "UTF-8");
+            statement = connection.createStatement();
 
+            pstmt = connection.prepareStatement("INSERT INTO package VALUES (?,?,?)");
+            sstmt = connection.prepareStatement("SELECT * FROM package WHERE name = ?");
+
+            //File input = new File("C:/Users/myrlin/Desktop/Java/JavaDocs/docs/api/java/util/package-summary.html");
+            File input = new File(dir);
+            doc = Jsoup.parse(input, "UTF-8");
+
+        } catch (SQLException sqle) {
+            System.out.println("in loadPackage method");
+            sqle.printStackTrace();
+            System.out.println();
+            totalSQLExceptions++;
+        } catch (IOException ioe) {
+            System.out.println("in loadPackage method");
+            ioe.printStackTrace();
+            System.out.println();
+            totalIOExceptions++;
+        }
 
         String foreignKey = null;
 
@@ -204,7 +256,7 @@ public class Main {
     //            System.out.println();
 
             selectRS.close();
-
+            statement.close();
 
         } catch (NullPointerException npe) {
             System.out.println("in loadPackage method");
@@ -223,7 +275,6 @@ public class Main {
             totalOtherExceptions++;
         }
 
-        statement.close();
 
         totalPackageRows = totalPackageRows + packageRows;
         //sleep(500);
@@ -240,21 +291,36 @@ public class Main {
                                        String dir,
                                        Connection connection,
                                        String searchOn,
-                                       String classType) throws Exception {
+                                       String classType) {
 
         int klassRows = 0;
 
+        Statement statement = null;
+        java.sql.PreparedStatement pstmt = null;
+        java.sql.PreparedStatement sstmt = null;
+        Document doc = null;
 
-        Statement statement = connection.createStatement();
+        try {
+            statement = connection.createStatement();
 
-        java.sql.PreparedStatement pstmt = connection.prepareStatement("INSERT INTO klass VALUES (?,?,?,?,?)");
-        java.sql.PreparedStatement sstmt = connection.prepareStatement("SELECT * FROM klass WHERE k_package_ID_fk = ?");
+            pstmt = connection.prepareStatement("INSERT INTO klass VALUES (?,?,?,?,?)");
+            sstmt = connection.prepareStatement("SELECT * FROM klass WHERE k_package_ID_fk = ?");
 
 
-        //File input = new File("C:/Users/myrlin/Desktop/Java/JavaDocs/docs/api/java/util/package-summary.html");
-        File input = new File(dir);
-        Document doc = Jsoup.parse(input, "UTF-8");
-
+            //File input = new File("C:/Users/myrlin/Desktop/Java/JavaDocs/docs/api/java/util/package-summary.html");
+            File input = new File(dir);
+            doc = Jsoup.parse(input, "UTF-8");
+        } catch (SQLException sqle) {
+            System.out.println("in loadKlass method");
+            sqle.printStackTrace();
+            System.out.println();
+            totalSQLExceptions++;
+        } catch (IOException ioe) {
+            System.out.println("in loadKlass method");
+            ioe.printStackTrace();
+            System.out.println();
+            totalIOExceptions++;
+        }
 
 
         // Element table = doc.select("table[summary=Interface Summary table, listing interfaces, and an explanation]").first();
@@ -264,7 +330,7 @@ public class Main {
 
         String inputName = null;
         try {
-            if (table.hasText()) {
+            if (table != null && table.hasText()) {
 
                 Iterator<Element> iterator = table.select("td").iterator();
                 int count = 1;
@@ -309,6 +375,7 @@ public class Main {
                 }
 
                 selectRS.close();
+                statement.close();
 
             }
         } catch (NullPointerException npe) {
@@ -329,8 +396,6 @@ public class Main {
         }
 
 
-        statement.close();
-
         totalKlassRows = totalKlassRows + klassRows;
         System.out.println();
         System.out.println("Klass: rows added = " + klassRows);
@@ -340,20 +405,36 @@ public class Main {
 
 
 
-    private static void loadExceptionTable(String packageFK, String dir, Connection connection, String searchOn) throws Exception {
+    private static void loadExceptionTable(String packageFK, String dir, Connection connection, String searchOn) {
 
         int exceptionRows = 0;
 
-        Statement statement = connection.createStatement();
+        Statement statement = null;
+        java.sql.PreparedStatement pstmt = null;
+        java.sql.PreparedStatement sstmt = null;
+        Document doc = null;
 
-        java.sql.PreparedStatement pstmt = connection.prepareStatement("INSERT INTO exception VALUES (?,?,?,?,?)");
-        java.sql.PreparedStatement sstmt = connection.prepareStatement("SELECT * FROM exception WHERE x_package_ID_fk = ?");
+        try {
+            statement = connection.createStatement();
+
+            pstmt = connection.prepareStatement("INSERT INTO exception VALUES (?,?,?,?,?)");
+            sstmt = connection.prepareStatement("SELECT * FROM exception WHERE x_package_ID_fk = ?");
 
 
-        //File input = new File("C:/Users/myrlin/Desktop/Java/JavaDocs/docs/api/java/util/package-summary.html");
-        File input = new File(dir);
-        Document doc = Jsoup.parse(input, "UTF-8");
-
+            //File input = new File("C:/Users/myrlin/Desktop/Java/JavaDocs/docs/api/java/util/package-summary.html");
+            File input = new File(dir);
+            doc = Jsoup.parse(input, "UTF-8");
+        } catch (SQLException sqle) {
+            System.out.println("in loadException method");
+            sqle.printStackTrace();
+            System.out.println();
+            totalSQLExceptions++;
+        } catch (IOException ioe) {
+            System.out.println("in loadException method");
+            ioe.printStackTrace();
+            System.out.println();
+            totalIOExceptions++;
+        }
 
 
         // Element table = doc.select("table[summary=Interface Summary table, listing interfaces, and an explanation]").first();
@@ -363,7 +444,7 @@ public class Main {
 
         String inputName = null;
         try {
-            if (table.hasText()) {
+            if (table != null && table.hasText()) {
 
                 Iterator<Element> iterator = table.select("td").iterator();
                 int count = 1;
@@ -405,6 +486,7 @@ public class Main {
                 }
 
                 selectRS.close();
+                statement.close();
 
             }
         } catch (NullPointerException npe) {
@@ -425,8 +507,6 @@ public class Main {
         }
 
 
-        statement.close();
-
         totalExceptionRows = totalExceptionRows + exceptionRows;
         System.out.println();
         System.out.println("Exception: rows added = " + exceptionRows);
@@ -434,19 +514,36 @@ public class Main {
 
     }
 
-    private static void loadErrorsTable(String packageFK, String dir, Connection connection, String searchOn) throws Exception{
+    private static void loadErrorsTable(String packageFK, String dir, Connection connection, String searchOn) {
 
         int errorsRows = 0;
 
-        Statement statement = connection.createStatement();
+        Statement statement = null;
+        java.sql.PreparedStatement pstmt = null;
+        java.sql.PreparedStatement sstmt = null;
+        Document doc = null;
 
-        java.sql.PreparedStatement pstmt = connection.prepareStatement("INSERT INTO errors VALUES (?,?,?,?,?)");
-        java.sql.PreparedStatement sstmt = connection.prepareStatement("SELECT * FROM errors WHERE r_package_ID_fk = ?");
+        try {
+            statement = connection.createStatement();
+
+            pstmt = connection.prepareStatement("INSERT INTO errors VALUES (?,?,?,?,?)");
+            sstmt = connection.prepareStatement("SELECT * FROM errors WHERE r_package_ID_fk = ?");
 
 
-        //File input = new File("C:/Users/myrlin/Desktop/Java/JavaDocs/docs/api/java/util/package-summary.html");
-        File input = new File(dir);
-        Document doc = Jsoup.parse(input, "UTF-8");
+            //File input = new File("C:/Users/myrlin/Desktop/Java/JavaDocs/docs/api/java/util/package-summary.html");
+            File input = new File(dir);
+            doc = Jsoup.parse(input, "UTF-8");
+        } catch (SQLException sqle) {
+            System.out.println("in loadException method");
+            sqle.printStackTrace();
+            System.out.println();
+            totalSQLExceptions++;
+        } catch (IOException ioe) {
+            System.out.println("in loadException method");
+            ioe.printStackTrace();
+            System.out.println();
+            totalIOExceptions++;
+        }
 
 
         // Element table = doc.select("table[summary=Interface Summary table, listing interfaces, and an explanation]").first();
@@ -456,7 +553,7 @@ public class Main {
 
         String inputName = null;
         try {
-            if (table.hasText()) {
+            if (table != null && table.hasText()) {
 
                 Iterator<Element> iterator = table.select("td").iterator();
                 int count = 1;
@@ -498,6 +595,7 @@ public class Main {
                 }
 
                 selectRS.close();
+                statement.close();
 
             }
         } catch (NullPointerException npe) {
@@ -518,8 +616,6 @@ public class Main {
         }
 
 
-        statement.close();
-
         totalErrorsRows = totalErrorsRows + errorsRows;
         System.out.println();
         System.out.println("Errors: rows added = " + errorsRows);
@@ -528,16 +624,23 @@ public class Main {
     }
 
 
-
-
-    private static void loadMethodTable(String searchname, String klassID, File directory, Connection connection) throws Exception {
+    private static void loadMethodTable(String searchname, String klassID, File directory, Connection connection) {
 
         int methodRows = 0;
 
-        Statement statement = connection.createStatement();
+        Statement statement = null;
+        java.sql.PreparedStatement pstmt = null;
 
-        java.sql.PreparedStatement pstmt = connection.prepareStatement("INSERT INTO method VALUES (?,?,?,?,?,?)");
+        try {
+            statement = connection.createStatement();
 
+            pstmt = connection.prepareStatement("INSERT INTO method VALUES (?,?,?,?,?,?)");
+        } catch (SQLException sqle) {
+            System.out.println("in loadMethod method");
+            sqle.printStackTrace();
+            System.out.println();
+            totalSQLExceptions++;
+        }
 
         String trimName = searchname.split("<", 2)[0];
 
@@ -548,8 +651,6 @@ public class Main {
 
         System.out.println("in loadMethodTable: filepath = " + methodFile);
 
-
-
         try {
             if (testFile.isFile()) {
                 File input = new File(methodFile);
@@ -558,40 +659,41 @@ public class Main {
 
 
                 Element table = doc.select("table[summary=Method Summary table, listing methods, and an explanation]").first();
-                Iterator<Element> iterator = table.select("td[class=colFirst], td[class=colLast]").iterator(); //, div[class=block]
+                if (table != null) {
+                    Iterator<Element> iterator = table.select("td[class=colFirst], td[class=colLast]").iterator(); //, div[class=block]
 
-                String modifier = null;
-                String name = null;
-                String trimmed = null;
+                    String modifier = null;
+                    String name = null;
+                    String trimmed = null;
 
-                while (iterator.hasNext()) {
-                    modifier = iterator.next().text();
-                    name = iterator.next().text();
+                    while (iterator.hasNext()) {
+                        modifier = iterator.next().text();
+                        name = iterator.next().text();
 
-                    trimmed = name.split("\\)", 2)[0];   // concept from:http://stackoverflow.com/questions/18220022/how-to-trim-a-string-after-a-specific-character-in-java
-                    trimmed = trimmed + ")";
+                        trimmed = name.split("\\)", 2)[0];   // concept from:http://stackoverflow.com/questions/18220022/how-to-trim-a-string-after-a-specific-character-in-java
+                        trimmed = trimmed + ")";
 
-                    pstmt.setString(1, null);                 // ID
-                    if (modifier.length() > 100) {
-                        modifier = modifier.substring(0, 99);
+                        pstmt.setString(1, null);                 // ID
+                        if (modifier.length() > 100) {
+                            modifier = modifier.substring(0, 99);
+                        }
+                        pstmt.setString(2, modifier);             // modifier
+                        if (trimmed.length() > 200) {
+                            trimmed = trimmed.substring(0, 199);
+                        }
+                        pstmt.setString(3, trimmed);              // name
+                        if (name.length() > 400) {
+                            name = name.substring(0, 399);
+                        }
+                        pstmt.setString(4, name);                 // summary
+                        pstmt.setString(5, null);                 // detail
+                        pstmt.setString(6, klassID);              // klass ID
+                        pstmt.executeUpdate();
+
+                        methodRows++;
+
                     }
-                    pstmt.setString(2, modifier);             // modifier
-                    if (trimmed.length() > 200) {
-                        trimmed = trimmed.substring(0, 199);
-                    }
-                    pstmt.setString(3, trimmed);              // name
-                    if (name.length() > 400) {
-                        name = name.substring(0, 399);
-                    }
-                    pstmt.setString(4, name);                 // summary
-                    pstmt.setString(5, null);                 // detail
-                    pstmt.setString(6, klassID);              // klass ID
-                    pstmt.executeUpdate();
-
-                    methodRows++;
-
                 }
-
                 statement.close();
 
             } else {
@@ -629,13 +731,24 @@ public class Main {
     private static void loadConstructorTable(String searchname,
                                              String klassID,
                                              File directory,
-                                             Connection connection) throws Exception {
+                                             Connection connection) {
 
         int constructorRows = 0;
 
-        Statement statement = connection.createStatement();
+        Statement statement = null;
+        java.sql.PreparedStatement pstmt = null;
 
-        java.sql.PreparedStatement pstmt = connection.prepareStatement("INSERT INTO constructor VALUES (?,?,?,?,?,?)");
+        try {
+
+            statement = connection.createStatement();
+            pstmt = connection.prepareStatement("INSERT INTO constructor VALUES (?,?,?,?,?,?)");
+
+        } catch (SQLException sqle) {
+            System.out.println("in loadConstructor method");
+            sqle.printStackTrace();
+            System.out.println();
+            totalSQLExceptions++;
+        }
 
 
         String trimName = searchname.split("<", 2)[0];
@@ -657,41 +770,42 @@ public class Main {
 
 
                 Element table = doc.select("table[summary=Constructor Summary table, listing constructors, and an explanation]").first();
-                Iterator<Element> iterator = table.select("td[class=colFirst], td[class=colLast]").iterator(); //, div[class=block]
+                if (table != null) {
+                    Iterator<Element> iterator = table.select("td[class=colFirst], td[class=colLast]").iterator(); //, div[class=block]
 
-                String modifier = null;
-                String name = null;
-                String trimmed = null;
+                    String modifier = null;
+                    String name = null;
+                    String trimmed = null;
 
-                while (iterator.hasNext()) {
-                    modifier = iterator.next().text();
-                    name = iterator.next().text();
+                    while (iterator.hasNext()) {
+                        modifier = iterator.next().text();
+                        name = iterator.next().text();
 
-                    trimmed = name.split("\\)", 2)[0];   // concept from:http://stackoverflow.com/questions/18220022/how-to-trim-a-string-after-a-specific-character-in-java
-                    trimmed = trimmed + ")";
+                        trimmed = name.split("\\)", 2)[0];   // concept from:http://stackoverflow.com/questions/18220022/how-to-trim-a-string-after-a-specific-character-in-java
+                        trimmed = trimmed + ")";
 
-                    pstmt.setString(1, null);                 // ID
-                    if (modifier.length() > 100) {
-                        modifier = modifier.substring(0, 99);
+                        pstmt.setString(1, null);                 // ID
+                        if (modifier.length() > 100) {
+                            modifier = modifier.substring(0, 99);
+                        }
+                        pstmt.setString(2, modifier);             // modifier
+                        if (trimmed.length() > 200) {
+                            trimmed = trimmed.substring(0, 199);
+                        }
+                        pstmt.setString(3, trimmed);              // name
+                        if (name.length() > 400) {
+                            name = name.substring(0, 399);
+                        }
+                        pstmt.setString(4, name);                 // summary
+                        pstmt.setString(5, null);                 // detail
+                        pstmt.setString(6, klassID);              // klass ID
+                        pstmt.executeUpdate();
+
+
+                        constructorRows++;
+
                     }
-                    pstmt.setString(2, modifier);             // modifier
-                    if (trimmed.length() > 200) {
-                        trimmed = trimmed.substring(0, 199);
-                    }
-                    pstmt.setString(3, trimmed);              // name
-                    if (name.length() > 400) {
-                        name = name.substring(0, 399);
-                    }
-                    pstmt.setString(4, name);                 // summary
-                    pstmt.setString(5, null);                 // detail
-                    pstmt.setString(6, klassID);              // klass ID
-                    pstmt.executeUpdate();
-
-
-                    constructorRows++;
-
                 }
-
                 statement.close();
 
             } else {
@@ -734,9 +848,18 @@ public class Main {
 
         int fieldRows = 0;
 
-        Statement statement = connection.createStatement();
+        Statement statement = null;
+        java.sql.PreparedStatement pstmt = null;
 
-        java.sql.PreparedStatement pstmt = connection.prepareStatement("INSERT INTO field VALUES (?,?,?,?,?,?)");
+        try {
+            statement = connection.createStatement();
+            pstmt = connection.prepareStatement("INSERT INTO field VALUES (?,?,?,?,?,?)");
+        } catch (SQLException sqle) {
+            System.out.println("in loadField method");
+            sqle.printStackTrace();
+            System.out.println();
+            totalSQLExceptions++;
+        }
 
 
         String trimName = searchname.split("<", 2)[0];
@@ -756,38 +879,40 @@ public class Main {
 
 
                 Element table = doc.select("table[summary=Field Summary table, listing fields, and an explanation]").first();
-                Iterator<Element> iterator = table.select("td[class=colFirst], td[class=colLast]").iterator(); //, div[class=block]
+                if (table != null) {
+                    Iterator<Element> iterator = table.select("td[class=colFirst], td[class=colLast]").iterator(); //, div[class=block]
 
-                String modifier = null;
-                String name = null;
-                String trimmed = null;
+                    String modifier = null;
+                    String name = null;
+                    String trimmed = null;
 
-                while (iterator.hasNext()) {
-                    modifier = iterator.next().text();
-                    name = iterator.next().text();
+                    while (iterator.hasNext()) {
+                        modifier = iterator.next().text();
+                        name = iterator.next().text();
 
-                    trimmed = name.split("\\)", 2)[0];   // concept from:http://stackoverflow.com/questions/18220022/how-to-trim-a-string-after-a-specific-character-in-java
-                    trimmed = trimmed + ")";
+                        trimmed = name.split("\\)", 2)[0];   // concept from:http://stackoverflow.com/questions/18220022/how-to-trim-a-string-after-a-specific-character-in-java
+                        trimmed = trimmed + ")";
 
-                    pstmt.setString(1, null);                 // ID
-                    if (modifier.length() > 100) {
-                        modifier = modifier.substring(0, 99);
+                        pstmt.setString(1, null);                 // ID
+                        if (modifier.length() > 100) {
+                            modifier = modifier.substring(0, 99);
+                        }
+                        pstmt.setString(2, modifier);             // modifier
+                        if (trimmed.length() > 200) {
+                            trimmed = trimmed.substring(0, 199);
+                        }
+                        pstmt.setString(3, trimmed);              // name
+                        if (name.length() > 400) {
+                            name = name.substring(0, 399);
+                        }
+                        pstmt.setString(4, name);                 // summary
+                        pstmt.setString(5, null);                 // detail
+                        pstmt.setString(6, klassID);              // klass ID
+                        pstmt.executeUpdate();
+
+                        fieldRows++;
+
                     }
-                    pstmt.setString(2, modifier);             // modifier
-                    if (trimmed.length() > 200) {
-                        trimmed = trimmed.substring(0, 199);
-                    }
-                    pstmt.setString(3, trimmed);              // name
-                    if (name.length() > 400) {
-                        name = name.substring(0, 399);
-                    }
-                    pstmt.setString(4, name);                 // summary
-                    pstmt.setString(5, null);                 // detail
-                    pstmt.setString(6, klassID);              // klass ID
-                    pstmt.executeUpdate();
-
-                    fieldRows++;
-
                 }
 
                 statement.close();
@@ -824,26 +949,33 @@ public class Main {
     }
 
 
-    private static void deleteTables(Connection connection) throws Exception {
+    private static void deleteTables(Connection connection) {
 
 
-        Statement statement = connection.createStatement();
+        try {
+            Statement statement = connection.createStatement();
 
-        statement.execute("DELETE FROM constructor");
-        statement.execute("DELETE FROM field");
-        statement.execute("DELETE FROM method");
+            statement.execute("DELETE FROM constructor");
+            statement.execute("DELETE FROM field");
+            statement.execute("DELETE FROM method");
 
 
-        statement.execute("DELETE FROM klass");
-        statement.execute("DELETE FROM annotation");
-        statement.execute("DELETE FROM exception");
-        statement.execute("DELETE FROM errors");
-        statement.execute("DELETE FROM enums");
+            statement.execute("DELETE FROM klass");
+            statement.execute("DELETE FROM annotation");
+            statement.execute("DELETE FROM exception");
+            statement.execute("DELETE FROM errors");
+            statement.execute("DELETE FROM enums");
 
-        statement.execute("DELETE FROM package");
+            statement.execute("DELETE FROM package");
 
-        statement.close();
+            statement.close();
 
+        } catch (SQLException sqle) {
+            System.out.println("in deleteTables");
+            sqle.printStackTrace();
+            System.out.println();
+            totalSQLExceptions++;
+        }
     }
 
 
