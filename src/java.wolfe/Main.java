@@ -1,7 +1,7 @@
 //package java.wolfe;
 
 /*
-*   Java 2545 MCTC Final Project - Part One of Two
+*   Java 2545 MCTC Final Project - Part One of Two Programs
 *   Database Loader
 *   Jeremy Wolfe, November 28, 2016
 *
@@ -12,9 +12,13 @@
 *
 *   Java API package-summary.html files have been created at the package level and
 *   drive the loading process. Summaries are scanned through and tables loaded with
- *   names and descriptions/summaries. Level 3 tables are loaded from .html files
- *   built from the class name.
- *
+*   names and descriptions/summaries. Level 3 tables are loaded from .html files
+*   built from the class name.
+*
+*  See the following Oracle link for a detailed description of the API structure and format:
+*  https://docs.oracle.com/javase/8/docs/api/help-doc.html
+*  The database is modelled based on the API structure.
+*
 *   7 tables are loaded:
 *   package         level 1
 *   class (klass)   level 2 - points back to package table
@@ -25,7 +29,7 @@
 *   constructor     level 3
 *
 *   This database is used by a Java GUI program to search and access the data
-*   (part two of two programs).
+*   (the GUI is part two of two programs).
 *
 *
  */
