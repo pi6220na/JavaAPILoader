@@ -1,0 +1,39 @@
+
+
+
+lib: java    after catching all exceptions
+*****************************************
+********* Total Package Rows = 63
+********* Total Klass Rows = 1321
+********* Total Exception Rows = 250
+********* Total Errors Rows = 30
+********* Total Method Rows = 25916
+********* Total Field Rows = 5425
+********* Total Constructor Rows = 471
+*****************************************
+********* Total NullPointerExceptions = 0
+********* Total SQLExceptions = 0
+********* Total IOExceptions = 0
+********* Total OtherExceptions = 0
+*****************************************
+Execution time is 1147.70500 seconds
+Process finished with exit code 0
+
+lib: javax   after catching all exceptions almost
+*****************************************
+********* Total Package Rows = 108
+********* Total Klass Rows = 1667
+********* Total Exception Rows = 170
+********* Total Errors Rows = 4
+********* Total Method Rows = 24302
+********* Total Field Rows = 4759
+********* Total Constructor Rows = 499
+*****************************************
+********* Total NullPointerExceptions = 0
+********* Total SQLExceptions = 0
+********* Total IOExceptions = 0
+********* Total OtherExceptions = 9
+*****************************************
+Execution time is 1109.84600 seconds
+Process finished with exit code 0
+
