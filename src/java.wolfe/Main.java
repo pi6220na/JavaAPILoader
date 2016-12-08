@@ -29,7 +29,7 @@
 *   constructor     level 3
 *
 *   This database is used by a Java GUI program to search and access the data
-*   (the GUI is part two of two programs).
+*   (the GUI is part two of two applications).
 *
 *
  */
@@ -48,12 +48,10 @@ import java.text.NumberFormat;
 import java.util.Iterator;
 
 
-/*
- * Created by Jeremy on 11/17/2016.
- */
 
 public class Main {
 
+    // counters for stats at end of program execution
     static int totalPackageRows = 0;
     static int totalKlassRows = 0;
     static int totalExceptionRows = 0;
@@ -107,13 +105,18 @@ public class Main {
         // instantiate a filesearch object to scan the API directories
         FileSearch fileSearch = new FileSearch();
 
-//        deleteTables(connection);   // comment out when run second job with javax lib
+//        deleteTables(connection);   // comment out when running second job with javax lib !!!!
 
 //        System.exit(0);
 
         // find all package-summary.html files for the /java or /javax directories
+        // the searchForFiles getResult method returns path and file name in a pathfile string containing
+        // the package-summary.html file for that particular directory. The filepath string is later passed to
+        // the 3rd level Method methods where the file name is stripped off and a new filepath string is built to
+        // access the <classname>.html file for method data in that respective directory.
         searchForFiles(fileSearch); // copied entirely from:
                                     // https://www.mkyong.com/java/search-directories-recursively-for-file-in-java/
+
 
         // main loop steps through each package-summary.html file and calls load table methods
         int items = 0;
@@ -198,8 +201,10 @@ public class Main {
             pstmt = connection.prepareStatement("INSERT INTO package VALUES (?,?,?)");
             sstmt = connection.prepareStatement("SELECT * FROM package WHERE name = ?");
 
+            // example of what the dir string looks like immediately follows this comment:
             //File input = new File("C:/Users/myrlin/Desktop/Java/JavaDocs/docs/api/java/util/package-summary.html");
             File input = new File(dir);
+            // this sets the input file to be scanned by JSoup
             doc = Jsoup.parse(input, "UTF-8");
 
         } catch (SQLException sqle) {
@@ -216,6 +221,9 @@ public class Main {
 
         String foreignKey = null;
 
+
+        // JSoup doc.select statement scans the html file for selected items and returns them in an Elements data
+        // structure. Further refinements are made picking off the desired data as needed.
         try {
             Elements items = doc.select("div[class=header]");
             Iterator<Element> iterator = items.select("h1").iterator();
@@ -243,7 +251,6 @@ public class Main {
 
             packageRows++;
 
-            //ResultSet rs = statement.executeQuery("SELECT * FROM package");
             sstmt.setString(1, nameField);
             ResultSet selectRS = sstmt.executeQuery();
 
@@ -988,12 +995,10 @@ public class Main {
     // https://www.mkyong.com/java/search-directories-recursively-for-file-in-java/
     private static void searchForFiles(FileSearch fileSearch) {
 
-        //FileSearch fileSearch = new FileSearch();
 
-        //try different directory and filename :)
-        //  fileSearch.searchDirectory(new File("/Users/mkyong/websites"), "post.php");
+        // this is where the search directory is specified each time the program is run.
+        // first run against the java library, then run against the javax library.
         searchDirectory(new File("C:\\Users\\myrlin\\Desktop\\Java\\JavaDocs\\docs\\api\\javax"), "package-summary.html", fileSearch);
-        //searchDirectory(new File("C:\\Users\\myrlin\\Desktop\\Java\\JavaDocs\\docs\\api"), "package-summary.html", fileSearch);
 
         int count = fileSearch.getResult().size();
         if(count ==0){
@@ -1010,8 +1015,6 @@ public class Main {
     // https://www.mkyong.com/java/search-directories-recursively-for-file-in-java/
     public static void searchDirectory(File directory, String fileNameToSearch, FileSearch fileSearch) {
 
-        // FileSearch fileSearch = new FileSearch();
-
         fileSearch.setFileNameToSearch(fileNameToSearch);
 
         if (directory.isDirectory()) {
@@ -1026,14 +1029,13 @@ public class Main {
     // https://www.mkyong.com/java/search-directories-recursively-for-file-in-java/
     private static void search(File file, FileSearch fileSearch) {
 
-        //  FileSearch fileSearch = new FileSearch();
-
         if (file.isDirectory()) {
             System.out.println("Searching directory ... " + file.getAbsoluteFile());
 
             //do you have permission to read this directory?
             if (file.canRead() && file.listFiles() != null) {
                 for (File temp : file.listFiles()) {
+                    // this is where the recursive call is made
                     if (temp.isDirectory()) {
                         search(temp, fileSearch);
                     } else {
@@ -1052,6 +1054,7 @@ public class Main {
     }
 
 
+    // this was used during testing/delevopment phase
     private static File getDirectory(File file) {
 
         File newDir = file.getParentFile();
